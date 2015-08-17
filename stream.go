@@ -135,3 +135,13 @@ func (s Stream) FirstWhereNot(f Filter) *Future {
 func (s Stream) Split(f Filter) (ts Stream, fs Stream) {
 	return s.Where(f), s.WhereNot(f)
 }
+
+// AsChan returns a channel where all items will be pushed. Note items while be queued in a fifo since the stream must
+// not block.
+func (s Stream) AsChan() (c chan Data){
+	c = make(chan Data)
+	s.Listen(func(d Data){
+		c<-d
+	})
+	return
+}

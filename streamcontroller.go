@@ -30,8 +30,14 @@ func (sc StreamController) Join(s Stream) {
 	if s.Closed == nil {
 		panic("Join noninitialized Stream")
 	}
+	if s.Closed.IsComplete() {
+		panic("Join closed Stream")
+	}
 	if sc.Closed == nil {
 		panic("Join on noninitialized Streamcontroller")
+	}
+	if sc.Closed.IsComplete() {
+		panic("Join on closed Streamcontroller")
 	}
 	ss := s.Listen(addJoined(sc))
 	s.Closed.Then(closeSus(ss))

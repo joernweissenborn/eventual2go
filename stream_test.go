@@ -9,19 +9,23 @@ func TestStreamBasics(t *testing.T) {
 	var sc StreamController
 	sc = NewStreamController()
 	defer sc.Close()
-	c := make(chan interface{})
-	sc.Listen(testlistener(c))
+	c := sc.AsChan()
 	sc.Add("test")
-	if (<-c).(string) != "test" {
-		t.Error("got wrong data")
+
+	select {
+	case <-time.After(1 * time.Second):
+		t.Fatal("no response")
+	case data := <-c:
+		if data.(string) != "test" {
+			t.Error("got wrong data")
+		}
 	}
 }
 
 func TestStreamDeliverAfterClose(t *testing.T) {
 	var sc StreamController
 	sc = NewStreamController()
-	c := make(chan interface{})
-	sc.Listen(testlistener(c))
+	c := sc.AsChan()
 	sc.Add("test")
 	sc.Close()
 
@@ -48,11 +52,16 @@ func TestStreamFirst(t *testing.T) {
 	var sc StreamController
 	sc = NewStreamController()
 	defer sc.Close()
-	c := make(chan interface{})
-	sc.First().Then(testcompleter(c))
+	c := sc.AsChan()
+
 	sc.Add("test")
-	if (<-c).(string) != "test" {
-		t.Error("got wrong data")
+	select {
+	case <-time.After(1 * time.Second):
+		t.Error("no response")
+	case data := <-c:
+		if data.(string) != "test" {
+			t.Error("got wrong data")
+		}
 	}
 }
 
@@ -60,8 +69,7 @@ func TestStreamFilter(t *testing.T) {
 	var sc StreamController
 	sc = NewStreamController()
 	defer sc.Close()
-	c := make(chan interface{})
-	sc.Where(func(d Data) bool { return d.(int) != 2 }).Listen(testlistener(c))
+	c := sc.Where(func(d Data) bool { return d.(int) != 2 }).AsChan()
 	sc.Add(1)
 	sc.Add(2)
 	sc.Add(2)
@@ -79,11 +87,9 @@ func TestStreamSplit(t *testing.T) {
 	var sc StreamController
 	sc = NewStreamController()
 	defer sc.Close()
-	c1 := make(chan interface{})
-	c2 := make(chan interface{})
 	y, n := sc.Split(func(d Data) bool { return d.(int) != 2 })
-	y.Listen(testlistener(c1))
-	n.Listen(testlistener(c2))
+	c1 := y.AsChan()
+	c2 := n.AsChan()
 	sc.Add(1)
 	sc.Add(2)
 	sc.Add(2)
@@ -105,8 +111,7 @@ func TestStreamTransformer(t *testing.T) {
 	var sc StreamController
 	sc = NewStreamController()
 	defer sc.Close()
-	c := make(chan interface{})
-	sc.Transform(func(d Data) Data { return d.(int) * 2 }).Listen(testlistener(c))
+	c :=  sc.Transform(func(d Data) Data { return d.(int) * 2 }).AsChan()
 	sc.Add(5)
 	if (<-c).(int) != 10 {
 		t.Error("got wrong data")
@@ -117,10 +122,8 @@ func TestStreamMultiplex(t *testing.T) {
 	var sc StreamController
 	sc = NewStreamController()
 	defer sc.Close()
-	c1 := make(chan interface{})
-	sc.Listen(testlistener(c1))
-	c2 := make(chan interface{})
-	sc.Listen(testlistener(c2))
+	c1 := sc.AsChan()
+	c2 := sc.AsChan()
 	sc.Add("test")
 	if (<-c1).(string) != "test" {
 		t.Error("got wrong data")
@@ -130,8 +133,3 @@ func TestStreamMultiplex(t *testing.T) {
 	}
 }
 
-func testlistener(c chan interface{}) Subscriber {
-	return func(d Data) {
-		c <- d
-	}
-}
