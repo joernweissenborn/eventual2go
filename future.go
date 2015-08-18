@@ -129,6 +129,25 @@ func (f *Future) Err(eh ErrorHandler) (nf *Future) {
 	return
 }
 
+// AsChan returns a channel which will receive either the result or the error after completion of the future.
+func (f *Future) AsChan() chan Data{
+	c := make(chan Data)
+	completer := func(d Data) Data{
+		c<-d
+		close(c)
+		return nil
+	}
+	completerErr := func(err error) (Data,error){
+		c<-err
+		close(c)
+		return nil, nil
+	}
+	f.Then(completer)
+	f.Err(completerErr)
+	return c
+}
+
+
 type futurecompleter struct {
 	cf CompletionHandler
 	f *Future
