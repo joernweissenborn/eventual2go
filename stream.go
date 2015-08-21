@@ -117,7 +117,11 @@ func (s Stream) WhereNot(f Filter) (fs Stream) {
 // Returns a future that will be completed with the first element added to the stream.
 func (s Stream) First() (f *Future) {
 	f = NewFuture()
-	ss := s.Listen(func(d Data) { f.Complete(d) })
+	ss := s.Listen(func(d Data) {
+		if !f.IsComplete(){
+			f.Complete(d)
+		}
+	})
 	f.Then(removeSub(ss))
 	return
 }
