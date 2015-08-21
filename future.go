@@ -1,6 +1,9 @@
 package eventual2go
 
-import "sync"
+import (
+	"sync"
+	"fmt"
+)
 
 // Creates a new future.
 func NewFuture() (F *Future) {
@@ -28,7 +31,7 @@ func (f *Future) Complete(d Data){
 	f.m.Lock()
 	defer f.m.Unlock()
 	if f.c {
-		panic("Completed complete future.")
+		panic(fmt.Sprint("Completed complete future with",d))
 	}
 	f.r = d
 	for _, fc := range f.fcs {
@@ -47,7 +50,7 @@ func (f *Future) CompleteError(err error){
 	f.m.Lock()
 	defer f.m.Unlock()
 	if f.c {
-		panic("Completed complete future.")
+		panic(fmt.Sprint("Errorcompleted complete future with",err))
 	}
 	f.e = err
 	for _, fce := range f.fces {
@@ -113,7 +116,7 @@ func (f *Future) GetResult() Data{
 
 // Then registers an error handler. If the future is already completed with an error, the handler gets executed
 // immediately.
-// Returns a future that either gets completed with result of the handler or error completed with theerror from handler,
+// Returns a future that either gets completed with result of the handler or error completed with the error from handler,
 // if not nil.
 func (f *Future) Err(eh ErrorHandler) (nf *Future) {
 	f.m.Lock()
