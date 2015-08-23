@@ -35,7 +35,7 @@ func (f *Future) Complete(d Data){
 	}
 	f.r = d
 	for _, fc := range f.fcs {
-		deliverData(fc,d)
+		go deliverData(fc,d)
 	}
 	f.c = true
 }
@@ -60,9 +60,7 @@ func (f *Future) CompleteError(err error){
 }
 
 func deliverData(fc futurecompleter, d interface {}){
-	go func(){
 		fc.f.Complete(fc.cf(d))
-	}()
 }
 
 func deliverErr(fce futurecompletererror, e error){
@@ -94,19 +92,7 @@ func (f *Future) Then(ch CompletionHandler) (nf *Future) {
 
 // Blocks until the future is complete.
 func (f *Future) WaitUntilComplete() {
-	c := make(chan struct{})
-	defer close(c)
-	cmpl := func(Data)Data{
-		c<-struct{}{}
-		return nil
-	}
-	ecmpl := func(error)(Data, error){
-		c<-struct{}{}
-		return nil, nil
-	}
-	f.Then(cmpl)
-	f.Err(ecmpl)
-	<-c
+	<-f.AsChan()
 }
 
 // Returns the result of the future, nil called before completion or after error completion.
@@ -134,19 +120,23 @@ func (f *Future) Err(eh ErrorHandler) (nf *Future) {
 
 // AsChan returns a channel which will receive either the result or the error after completion of the future.
 func (f *Future) AsChan() chan Data{
-	c := make(chan Data)
-	completer := func(d Data) Data{
-		c<-d
-		close(c)
-		return nil
+	c := make(chan Data,1)
+	cmpl := func(d chan Data) CompletionHandler{
+		return func(e Data)Data{
+			d<-e
+			close(d)
+			return nil
+		}
 	}
-	completerErr := func(err error) (Data,error){
-		c<-err
-		close(c)
-		return nil, nil
+	ecmpl :=func(d chan Data) ErrorHandler{
+		return func(e error)(Data, error){
+			d<-e
+			close(d)
+			return nil, nil
+		}
 	}
-	f.Then(completer)
-	f.Err(completerErr)
+	f.Then(cmpl(c))
+	f.Err(ecmpl(c))
 	return c
 }
 

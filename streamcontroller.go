@@ -44,7 +44,7 @@ func (sc StreamController) Join(s Stream) {
 }
 
 // Joins a future completion event.
-func (sc StreamController) JoinFuture(f Future) {
+func (sc StreamController) JoinFuture(f *Future) {
 	if sc.Closed == nil {
 		panic("Join on noninitialized Streamcontroller")
 	}
