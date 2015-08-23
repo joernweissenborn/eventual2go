@@ -43,6 +43,17 @@ func (sc StreamController) Join(s Stream) {
 	s.Closed.Then(closeSus(ss))
 }
 
+// Joins a future completion event.
+func (sc StreamController) JoinFuture(f Future) {
+	if sc.Closed == nil {
+		panic("Join on noninitialized Streamcontroller")
+	}
+	if sc.Closed.IsComplete() {
+		panic("Join on closed Streamcontroller")
+	}
+	f.Then(addJoinedFuture(sc))
+}
+
 func closeSus(ss Subscription) CompletionHandler {
 	return func(Data) Data {
 		ss.Close()
@@ -53,5 +64,12 @@ func closeSus(ss Subscription) CompletionHandler {
 func addJoined(sc StreamController) Subscriber {
 	return func(d Data) {
 		sc.Stream.add(d)
+	}
+}
+
+func addJoinedFuture(sc StreamController) CompletionHandler{
+	return func(d Data) Data{
+		sc.Stream.add(d)
+		return nil
 	}
 }
