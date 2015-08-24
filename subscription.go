@@ -35,3 +35,18 @@ func (s Subscription) Close() {
 	s.close <- s.index
 
 }
+
+// Terminates the Subscription when the Future (error-) completes.
+func (s Subscription) CloseOnFuture(f *Future) {
+	f.Then(s.closeOnComplete)
+	f.Err(s.closeOnCompleteError)
+}
+
+func (s Subscription) closeOnComplete(Data)Data{
+	s.Close()
+	return nil
+}
+func (s Subscription) closeOnCompleteError(error)(Data,error){
+	s.Close()
+	return nil, nil
+}
