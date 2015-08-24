@@ -152,8 +152,12 @@ func (s Stream) Split(f Filter) (ts Stream, fs Stream) {
 // not block.
 func (s Stream) AsChan() (c chan Data){
 	c = make(chan Data)
-	s.Listen(func(d Data){
-		c<-d
-	})
+	s.Listen(pipeToChan(c))
 	return
+}
+
+func pipeToChan(c chan Data) Subscriber{
+	return func(d Data){
+		c<-d
+	}
 }

@@ -28,6 +28,11 @@ func NewReactor() (r Reactor) {
 	return
 }
 
+func (r Reactor) Shutdown() {
+	r.shutdown.Complete(nil)
+	close(r.evtIn)
+}
+
 func (r Reactor) Fire(name string, data Data) {
 	r.evtIn <- Event{name,data}
 }
@@ -75,21 +80,11 @@ func (r Reactor) createEventFromFutureError(name string) ErrorHandler {
 }
 
 func (r Reactor) react()  {
-	stop := r.shutdown.AsChan()
-	for {
-		select {
-		case <- stop:
-			return
-
-		case evt, ok := <-r.evtIn:
-			if !ok {
-				return
-			}
-			r.m.Lock()
-			if h, f := r.eventRegister[evt.Name]; f {
-				h(evt.Data)
-			}
-			r.m.Unlock()
+	for evt := range r.evtIn{
+		r.m.Lock()
+		if h, f := r.eventRegister[evt.Name]; f {
+			h(evt.Data)
 		}
+		r.m.Unlock()
 	}
 }
