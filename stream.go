@@ -76,6 +76,9 @@ func (s Stream) add(d interface{}) {
 
 // Registers a subscriber. Returns Subscription, which can be used to terminate the subcription.
 func (s Stream) Listen(sr Subscriber) (ss Subscription) {
+	if s.Closed == nil {
+		panic("Listen on uninitialized stream")
+	}
 	c := make(chan Subscription)
 	s.addsus <- addsuscrption{sr, c}
 	return <-c

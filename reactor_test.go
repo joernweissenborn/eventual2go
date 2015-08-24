@@ -20,6 +20,31 @@ func TestReactorBasic(t *testing.T) {
 	}
 }
 
+func TestReactorMultipleEvents(t *testing.T) {
+	r := NewReactor()
+	rt1 := new(reactorTester)
+	rt2 := new(reactorTester)
+	r.React("TestEvent1",rt1.Handler)
+	r.React("TestEvent2",rt2.Handler)
+	time.Sleep(10*time.Millisecond)
+	r.Fire("TestEvent1","HALLO")
+	r.Fire("TestEvent2","HALLO")
+
+	if !rt1.evtFired {
+		t.Error("Event didnt fire")
+	}
+	if rt1.data.(string) != "HALLO" {
+		t.Error("Wrong Data")
+	}
+
+	if !rt2.evtFired {
+		t.Fatal("Event didnt fire")
+	}
+	if rt2.data.(string) != "HALLO" {
+		t.Error("Wrong Data")
+	}
+}
+
 func TestReactorFuture(t *testing.T) {
 	r := NewReactor()
 	rt := new(reactorTester)
