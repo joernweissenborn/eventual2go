@@ -155,6 +155,7 @@ func (s Stream) Split(f Filter) (ts Stream, fs Stream) {
 // not block.
 func (s Stream) AsChan() (c chan Data){
 	c = make(chan Data)
+	s.Closed.Then(closeChan(c))
 	s.Listen(pipeToChan(c))
 	return
 }
@@ -162,5 +163,11 @@ func (s Stream) AsChan() (c chan Data){
 func pipeToChan(c chan Data) Subscriber{
 	return func(d Data){
 		c<-d
+	}
+}
+func closeChan(c chan Data) CompletionHandler{
+	return func(d Data)Data{
+		close(c)
+		return nil
 	}
 }
