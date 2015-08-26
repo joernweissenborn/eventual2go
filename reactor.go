@@ -8,6 +8,7 @@ type Reactor struct {
 	m *sync.Mutex
 
 	evtIn StreamController
+	evtC chan Data
 
 	shutdown *Future
 
@@ -22,6 +23,7 @@ func NewReactor() (r *Reactor) {
 	r.m = new(sync.Mutex)
 
 	r.evtIn = NewStreamController()
+	r.evtC = r.evtIn.AsChan()
 
 	r.shutdown = NewFuture()
 
@@ -84,7 +86,7 @@ func (r *Reactor) createEventFromFutureError(name string) ErrorHandler {
 }
 
 func (r *Reactor) react()  {
-	for d := range r.evtIn.AsChan(){
+	for d := range r.evtC{
 		evt := d.(Event)
 		r.m.Lock()
 		if h, f := r.eventRegister[evt.Name]; f {

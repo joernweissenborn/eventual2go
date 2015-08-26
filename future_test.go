@@ -2,7 +2,6 @@ package eventual2go
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 )
 
@@ -124,7 +123,6 @@ func TestFutureMultiCompletion(t *testing.T) {
 
 func testcompleter(c chan interface{}) CompletionHandler {
 	return func(d Data) Data {
-		fmt.Println("data", d)
 		c <- d
 		return nil
 	}

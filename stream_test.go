@@ -22,23 +22,6 @@ func TestStreamBasics(t *testing.T) {
 	}
 }
 
-func TestStreamDeliverAfterClose(t *testing.T) {
-	var sc StreamController
-	sc = NewStreamController()
-	c := sc.AsChan()
-	sc.Add("test")
-	sc.Close()
-
-	select {
-	case <-time.After(1 * time.Second):
-		t.Error("no response")
-	case data := <-c:
-		if data.(string) != "test" {
-			t.Error("got wrong data")
-		}
-	}
-}
-
 func TestStreamClose(t *testing.T) {
 	var sc StreamController
 	sc = NewStreamController()

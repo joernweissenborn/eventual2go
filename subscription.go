@@ -2,7 +2,7 @@ package eventual2go
 
 // Creates a new subscription.
 func NewSubscription(index int, close chan int, sr Subscriber) (s Subscription) {
-	s.in = make(chan interface{})
+	s.in = make(chan Data)
 	s.add = make(streamchannel)
 	go s.add.pipe(s.in)
 	s.index = index
@@ -15,7 +15,7 @@ func NewSubscription(index int, close chan int, sr Subscriber) (s Subscription) 
 // Subscription invokes a Subscriber when data is added to the consumed stream. It is also used for terminating a
 // Subscription.
 type Subscription struct {
-	in    chan interface{}
+	in    chan Data
 	add   streamchannel
 	index int
 	close chan int

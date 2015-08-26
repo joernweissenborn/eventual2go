@@ -2,7 +2,7 @@ package eventual2go
 
 //Returns a new stream. Data can not be added to a Stream manually, use a StreamController instead.
 func NewStream() (s Stream) {
-	s.in = make(chan interface{})
+	s.in = make(chan Data)
 	s.addsus = make(chan addsuscrption)
 	s.rmsusc = make(chan int)
 	s.Closed = NewFuture()
@@ -12,7 +12,7 @@ func NewStream() (s Stream) {
 
 // A Stream can be consumed or new streams be derived by registering handler functions.
 type Stream struct {
-	in chan interface{}
+	in chan Data
 
 	addsus chan addsuscrption
 	rmsusc chan int
@@ -69,7 +69,7 @@ func (s Stream) run() {
 	}
 }
 
-func (s Stream) add(d interface{}) {
+func (s Stream) add(d Data) {
 	s.in <- d
 	return
 }

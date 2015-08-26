@@ -11,9 +11,10 @@ func TestReactorBasic(t *testing.T) {
 	r.React("TestEvent",rt.Handler)
 
 	r.Fire("TestEvent","HALLO")
+	time.Sleep(1*time.Millisecond)
 
 	if !rt.evtFired {
-		t.Error("Event didnt fire")
+		t.Fatal("Event didnt fire")
 	}
 	if rt.data.(string) != "HALLO" {
 		t.Error("Wrong Data")
@@ -26,12 +27,12 @@ func TestReactorMultipleEvents(t *testing.T) {
 	rt2 := new(reactorTester)
 	r.React("TestEvent1",rt1.Handler)
 	r.React("TestEvent2",rt2.Handler)
-	time.Sleep(10*time.Millisecond)
-	r.Fire("TestEvent1","HALLO")
 	r.Fire("TestEvent2","HALLO")
+	r.Fire("TestEvent1","HALLO")
+	time.Sleep(1*time.Millisecond)
 
 	if !rt1.evtFired {
-		t.Error("Event didnt fire")
+		t.Fatal("Event didnt fire")
 	}
 	if rt1.data.(string) != "HALLO" {
 		t.Error("Wrong Data")
@@ -55,7 +56,7 @@ func TestReactorFuture(t *testing.T) {
 	f.Complete("HALLO")
 	time.Sleep(1*time.Millisecond)
 	if !rt.evtFired {
-		t.Error("Event didnt fire")
+		t.Fatal("Event didnt fire")
 	}
 	if rt.data.(string) != "HALLO" {
 		t.Error("Wrong Data")
@@ -71,7 +72,7 @@ func TestReactorFutureError(t *testing.T) {
 	f.CompleteError(errors.New("HALLO"))
 	time.Sleep(1*time.Millisecond)
 	if !rt.evtFired {
-		t.Error("Event didnt fire")
+		t.Fatal("Event didnt fire")
 	}
 	if rt.data.(error).Error() != "HALLO" {
 		t.Error("Wrong Data")
@@ -87,7 +88,7 @@ func TestReactorStream(t *testing.T) {
 	s.Add("HALLO")
 	time.Sleep(1*time.Millisecond)
 	if !rt.evtFired {
-		t.Error("Event didnt fire")
+		t.Fatal("Event didnt fire")
 	}
 	if rt.data.(string) != "HALLO" {
 		t.Error("Wrong Data")
