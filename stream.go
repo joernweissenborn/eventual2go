@@ -12,6 +12,8 @@ type Stream struct {
 
 	subscriptions []*Subscription
 	closed *Completer
+
+	stop chan struct {}
 }
 
 //Returns a new stream. Data can not be added to a Stream manually, use a StreamController instead.
@@ -23,8 +25,7 @@ func NewStream() (s *Stream) {
 
 	// closing
 	s.closed = NewCompleter()
-	s.closed.Future().Then(s.close)
-
+	s.stop = make(chan struct {})
 	go s.run()
 	return
 }
@@ -68,16 +69,14 @@ func (s *Stream) unsubscribe(rss *Subscription ) {
 	}
 }
 
-func (s *Stream) close(Data) Data{
-	close(s.add_subscription)
-	close(s.remove_subscription)
-	close(s.data_in)
-	return nil
+func (s *Stream) close(){
+	s.stop <- struct {} {}
 }
 
 
 // Closes a Stream and cancels all subscriptions.
 func (s *Stream) Close() {
+	s.close()
 	s.closed.Complete(nil)
 }
 
@@ -227,9 +226,15 @@ func (s *Stream) run() {
 				ss.add(d)
 			}
 
-
+		case <-s.stop:
+			close(s.add_subscription)
+			close(s.remove_subscription)
+			close(s.data_in)
+			for _, ss := range s.subscriptions {
+				ss.close()
+			}
+			return
 		}
-
 
 	}
 

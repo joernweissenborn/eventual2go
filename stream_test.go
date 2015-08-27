@@ -31,20 +31,24 @@ func TestStreamClose(t *testing.T) {
 
 func TestStreamCancelSub(t *testing.T) {
 	sc := NewStreamController()
-	defer sc.Close()
 	a := false
-	sc.Listen(func(d Data){
-		a=true}).Close()
+	ss := sc.Listen(func(d Data){
+		a=true})
+	ss.Close()
 	sc.Add(0)
 	time.Sleep(1*time.Millisecond)
 	if a {
 		t.Error("subscription didn't cancel")
+	}
+	if !ss.Closed().Completed() {
+		t.Error("subscription future didn't complete")
 	}
 
 	b := false
 	c := NewCompleter()
 	sc.Listen(func(Data){b=true}).CloseOnFuture(c.Future())
 	c.Complete(0)
+	time.Sleep(1*time.Millisecond)
 
 	sc.Add(0)
 	time.Sleep(1*time.Millisecond)
@@ -52,6 +56,15 @@ func TestStreamCancelSub(t *testing.T) {
 	if b {
 		t.Error("subscription didn't cancel")
 	}
+
+	ss = sc.Listen(func(d Data){
+		a=true})
+	sc.Close()
+	time.Sleep(1*time.Millisecond)
+	if !ss.Closed().Completed() {
+		t.Error("subscription future didn't complete")
+	}
+
 }
 
 func TestStreamMultiSubscription(t *testing.T) {

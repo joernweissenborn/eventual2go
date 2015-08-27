@@ -42,20 +42,22 @@ func (s *Subscription) in() {
 		if len(pile) == 0 {
 			d, ok := <-s.inC
 
-			if ok{
+			if ok && !stop{
 				pile = append(pile, d)
 			} else {
 				close(s.doC)
+				s.closed.Complete(nil)
 				return
 			}
 		} else {
 			select {
 			case s.doC <- pile[0]:
-				pile = pile[1:]
-				if len(pile) == 0 && stop{
+				if len(pile) == 1 && stop{
 					close(s.doC)
+					s.closed.Complete(nil)
 					return
 				}
+				pile = pile[1:]
 			case d, ok := <-s.inC:
 				if ok {
 					pile = append(pile, d)
@@ -66,7 +68,6 @@ func (s *Subscription) in() {
 			}
 		}
 	}
-	s.closed.Complete(nil)
 }
 
 func (s *Subscription) do(){
