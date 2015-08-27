@@ -10,7 +10,7 @@ type Reactor struct {
 	evtIn *StreamController
 	evtC chan Data
 
-	shutdown *Future
+	shutdown *Completer
 
 	eventRegister map[string]Subscriber
 
@@ -25,7 +25,7 @@ func NewReactor() (r *Reactor) {
 	r.evtIn = NewStreamController()
 	r.evtC = r.evtIn.AsChan()
 
-	r.shutdown = NewFuture()
+	r.shutdown = NewCompleter()
 
 	r.eventRegister = map[string]Subscriber{}
 
@@ -50,7 +50,7 @@ func (r *Reactor) React(name string, handler Subscriber) {
 }
 
 func (r *Reactor) AddStream(name string, s *Stream) {
-	s.Listen(r.createEventFromStream(name)).CloseOnFuture(r.shutdown)
+	s.Listen(r.createEventFromStream(name)).CloseOnFuture(r.shutdown.Future())
 }
 
 func (r *Reactor) createEventFromStream(name string) Subscriber {
@@ -65,7 +65,7 @@ func (r *Reactor) AddFuture(name string, f *Future) {
 
 func (r *Reactor) createEventFromFuture(name string) CompletionHandler {
 	return func(d Data) Data{
-		if !r.shutdown.IsComplete(){
+		if !r.shutdown.Completed(){
 			r.evtIn.Add(Event{name,d})
 		}
 		return nil
@@ -78,7 +78,7 @@ func (r *Reactor) AddFutureError(name string, f *Future) {
 
 func (r *Reactor) createEventFromFutureError(name string) ErrorHandler {
 	return func(e error) (Data,error){
-		if !r.shutdown.IsComplete() {
+		if !r.shutdown.Completed() {
 			r.evtIn.Add(Event{name, e})
 		}
 		return nil,nil

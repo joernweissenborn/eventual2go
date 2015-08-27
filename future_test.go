@@ -6,20 +6,19 @@ import (
 )
 
 func TestFutureBasicCompletion(t *testing.T) {
-	f := NewFuture()
+	cp := NewCompleter()
+	f := cp.Future()
 
-	if f.IsComplete() {
+	if f.Completed() {
 		t.Error("Complete to early")
 	}
 
-	c := make(chan interface{})
-	defer close(c)
-	f.Then(testcompleter(c))
+	c := f.AsChan()
 
-	f.Complete(true)
+	cp.Complete(true)
 
 	//
-	if !f.IsComplete() {
+	if !f.Completed() {
 		t.Error("not completed")
 	}
 
@@ -29,20 +28,15 @@ func TestFutureBasicCompletion(t *testing.T) {
 }
 
 func TestFutureChainCompletion(t *testing.T) {
-	f := NewFuture()
+	cp := NewCompleter()
+	f := cp.Future()
 
-	if f.IsComplete() {
-		t.Error("Complete to early")
-	}
+	c := f.AsChan()
 
-	c := make(chan interface{})
-	defer close(c)
-	f.Then(func(d Data) Data { return d }).Then(testcompleter(c))
-
-	f.Complete(true)
+	cp.Complete(true)
 
 	//
-	if !f.IsComplete() {
+	if !f.Completed() {
 		t.Error("not completed")
 	}
 
@@ -52,20 +46,17 @@ func TestFutureChainCompletion(t *testing.T) {
 }
 
 func TestFutureErrCompletion(t *testing.T) {
-	f := NewFuture()
-
-	if f.IsComplete() {
-		t.Error("Complete to early")
-	}
+	cp := NewCompleter()
+	f := cp.Future()
 
 	c1 := make(chan error)
 	defer close(c1)
 	f.Err(testcompletererr(c1))
 
-	f.CompleteError(errors.New("testerror"))
+	cp.CompleteError(errors.New("testerror"))
 
 	//
-	if !f.IsComplete() {
+	if !f.Completed() {
 		t.Error("not completed")
 	}
 
@@ -89,11 +80,8 @@ func TestFutureErrCompletion(t *testing.T) {
 }
 
 func TestFutureMultiCompletion(t *testing.T) {
-	f := NewFuture()
-
-	if f.IsComplete() {
-		t.Error("Complete to early")
-	}
+	cp := NewCompleter()
+	f := cp.Future()
 
 	c1 := make(chan interface{})
 	defer close(c1)
@@ -106,12 +94,7 @@ func TestFutureMultiCompletion(t *testing.T) {
 		t.Fatal("fcs lenth not 2, is", len(f.fcs))
 	}
 
-	f.Complete(true)
-
-	//
-	if !f.IsComplete() {
-		t.Error("not completed")
-	}
+	cp.Complete(true)
 
 	if !(<-c1).(bool) {
 		t.Error("Completed with wrong args")
@@ -126,9 +109,6 @@ func testcompleter(c chan interface{}) CompletionHandler {
 		c <- d
 		return nil
 	}
-}
-func pipe(d interface{}) interface{} {
-	return d
 }
 
 func testcompletererr(c chan error) ErrorHandler {

@@ -8,7 +8,7 @@ type Subscription struct {
 	inC chan Data
 	doC chan Data
 
-	closed *Future
+	closed *Completer
 
 }
 
@@ -19,10 +19,14 @@ func NewSubscription(s *Stream,  sr Subscriber) (ss *Subscription) {
 	ss.inC = make(chan Data)
 	ss.doC = make(chan Data)
 //	ss.CloseOnFuture(s.closed)
-	ss.closed = NewFuture()
+	ss.closed = NewCompleter()
 	go ss.do()
 	go ss.in()
 	return
+}
+
+func (s *Subscription) Closed() *Future{
+	return s.closed.Future()
 }
 
 func (s *Subscription) add(d Data) {
@@ -38,7 +42,7 @@ func (s *Subscription) in() {
 			select {
 			case s.doC <- pile[0]:
 				pile = pile[1:]
-				if len(pile) == 0 && s.closed.IsComplete(){
+				if len(pile) == 0 && s.closed.Completed(){
 					close(s.doC)
 					return
 				}

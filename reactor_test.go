@@ -51,9 +51,10 @@ func TestReactorFuture(t *testing.T) {
 	rt := new(reactorTester)
 	r.React("TestEvent",rt.Handler)
 
-	f := NewFuture()
+	c := NewCompleter()
+	f := c.Future()
 	r.AddFuture("TestEvent",f)
-	f.Complete("HALLO")
+	c.Complete("HALLO")
 	time.Sleep(1*time.Millisecond)
 	if !rt.evtFired {
 		t.Fatal("Event didnt fire")
@@ -67,9 +68,10 @@ func TestReactorFutureError(t *testing.T) {
 	rt := new(reactorTester)
 	r.React("TestEvent",rt.Handler)
 
-	f := NewFuture()
+	c := NewCompleter()
+	f := c.Future()
 	r.AddFutureError("TestEvent",f)
-	f.CompleteError(errors.New("HALLO"))
+	c.CompleteError(errors.New("HALLO"))
 	time.Sleep(1*time.Millisecond)
 	if !rt.evtFired {
 		t.Fatal("Event didnt fire")

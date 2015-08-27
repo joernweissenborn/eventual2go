@@ -10,7 +10,7 @@ func (sc *StreamController) Add(Data Data) {
 	if sc.closed == nil {
 		panic("Add on noninitialized StreamController")
 	}
-	if sc.Stream.closed.IsComplete() {
+	if sc.Stream.closed.Completed() {
 		panic("Add on closed stream")
 	}
 	sc.Stream.add(Data)
@@ -31,17 +31,17 @@ func (sc *StreamController) Join(s *Stream) {
 	if s.closed == nil {
 		panic("Join noninitialized Stream")
 	}
-	if s.closed.IsComplete() {
+	if s.closed.Completed() {
 		panic("Join closed Stream")
 	}
 	if sc.closed == nil {
 		panic("Join on noninitialized Streamcontroller")
 	}
-	if sc.closed.IsComplete() {
+	if sc.closed.Completed() {
 		panic("Join on closed Streamcontroller")
 	}
 	ss := s.Listen(addJoined(sc))
-	ss.CloseOnFuture(sc.closed)
+	ss.CloseOnFuture(sc.closed.Future())
 }
 
 // Joins a future completion event.
@@ -49,7 +49,7 @@ func (sc *StreamController) JoinFuture(f *Future) {
 	if sc.closed == nil {
 		panic("Join on noninitialized Streamcontroller")
 	}
-	if sc.closed.IsComplete() {
+	if sc.closed.Completed() {
 		panic("Join on closed Streamcontroller")
 	}
 	f.Then(addJoinedFuture(sc))

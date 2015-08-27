@@ -8,7 +8,7 @@ type Stream struct {
 	data_in chan Data
 
 	subscriptions []*Subscription
-	closed *Future
+	closed *Completer
 }
 
 //Returns a new stream. Data can not be added to a Stream manually, use a StreamController instead.
@@ -19,8 +19,8 @@ func NewStream() (s *Stream) {
 	s.data_in = make(chan Data)
 
 	// closing
-	s.closed = NewFuture()
-	s.closed.Then(s.close)
+	s.closed = NewCompleter()
+	s.closed.Future().Then(s.close)
 
 	go s.run()
 	return
@@ -65,7 +65,7 @@ func (s Stream) Close() {
 }
 
 func (s Stream) Closed() *Future{
-	return s.closed
+	return s.closed.Future()
 }
 
 
@@ -73,13 +73,13 @@ func (s Stream) Closed() *Future{
 func (s *Stream) Listen(sr Subscriber) (ss *Subscription) {
 	ss = NewSubscription(s, sr)
 	s.add_subscription <- ss
-	ss.closed.Then(s.removeSubscription(ss))
+	ss.Closed().Then(s.removeSubscription(ss))
 	return
 }
 
 func (s *Stream) removeSubscription(ss *Subscription)CompletionHandler {
 	return func(Data) Data {
-		if !s.closed.IsComplete(){
+		if !s.closed.Completed(){
 			s.remove_subscription <- ss
 		}
 		return nil
@@ -89,7 +89,7 @@ func (s *Stream) removeSubscription(ss *Subscription)CompletionHandler {
 // Registers a Transformer and returns the transformed stream.
 func (s *Stream) Transform(t Transformer) (ts *Stream) {
 	ts = NewStream()
-	s.Listen(transform(ts,t)).CloseOnFuture(ts.closed)
+	s.Listen(transform(ts,t)).CloseOnFuture(ts.closed.Future())
 	return
 }
 
@@ -102,7 +102,7 @@ func transform(s *Stream, t Transformer) Subscriber {
 // Registers a Filter and returns the filtered stream. Elements will be added if the Filter returns TRUE.
 func (s Stream) Where(f Filter) (fs *Stream) {
 	fs = NewStream()
-	s.Listen(filter(fs,f)).CloseOnFuture(fs.closed)
+	s.Listen(filter(fs,f)).CloseOnFuture(fs.closed.Future())
 	return
 }
 
@@ -117,7 +117,7 @@ func filter(s *Stream, f Filter) Subscriber {
 // Registers a Filter and returns the filtered stream. Elements will be added if the Filter returns FALSE.
 func (s *Stream) WhereNot(f Filter) (fs *Stream) {
 	fs = NewStream()
-	s.Listen(filterNot(fs,f)).CloseOnFuture(fs.closed)
+	s.Listen(filterNot(fs,f)).CloseOnFuture(fs.closed.Future())
 	return
 }
 
@@ -132,15 +132,16 @@ func filterNot(s *Stream, f Filter) Subscriber {
 
 // Returns a future that will be completed with the first element added to the stream.
 func (s *Stream) First() (f *Future) {
-	f = NewFuture()
-	s.Listen(first(f)).CloseOnFuture(f)
+	c := NewCompleter()
+	f = c.Future()
+	s.Listen(first(c)).CloseOnFuture(f)
 	return
 }
 
-func first(f *Future) Subscriber{
+func first(c *Completer) Subscriber{
 	return func(d Data ){
-		if !f.IsComplete(){
-			f.Complete(d)
+		if !c.Completed(){
+			c.Complete(d)
 		}
 	}
 }
@@ -164,7 +165,7 @@ func (s *Stream) Split(f Filter) (ts *Stream, fs *Stream) {
 // not block.
 func (s *Stream) AsChan() (c chan Data){
 	c = make(chan Data)
-	s.Listen(pipeToChan(c)).closed.Then(closeChan(c))
+	s.Listen(pipeToChan(c)).Closed().Then(closeChan(c))
 	return
 }
 

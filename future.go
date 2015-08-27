@@ -20,56 +20,56 @@ type Future struct {
 	m *sync.Mutex
 	fcs []futurecompleter
 	fces []futurecompletererror
-	c bool
+	completed bool
 	r interface {}
 	e error
 }
 
 // Completes the future with the given data and triggers al registered completion handlers. Panics if the future is already
 // complete.
-func (f *Future) Complete(d Data){
+func (f *Future) complete(d Data){
 	f.m.Lock()
 	defer f.m.Unlock()
-	if f.c {
+	if f.completed {
 		panic(fmt.Sprint("Completed complete future with",d))
 	}
 	f.r = d
 	for _, fc := range f.fcs {
 		go deliverData(fc,d)
 	}
-	f.c = true
+	f.completed = true
 }
 
 // Returns the completion state.
-func (f *Future) IsComplete() bool {
-	return f.c
+func (f *Future) Completed() bool {
+	return f.completed
 }
 // Completes the future with the given error and triggers al registered error handlers. Panics if the future is already
 // complete.
-func (f *Future) CompleteError(err error){
+func (f *Future) completeError(err error){
 	f.m.Lock()
 	defer f.m.Unlock()
-	if f.c {
+	if f.completed {
 		panic(fmt.Sprint("Errorcompleted complete future with",err))
 	}
 	f.e = err
 	for _, fce := range f.fces {
 		deliverErr(fce,f.e)
 	}
-	f.c = true
+	f.completed = true
 }
 
-func deliverData(fc futurecompleter, d interface {}){
-		fc.f.Complete(fc.cf(d))
+func deliverData(fc futurecompleter, d Data){
+		fc.f.complete(fc.cf(d))
 }
 
 func deliverErr(fce futurecompletererror, e error){
 	go func(){
 		d, err := fce.ef(e)
 		if err == nil {
-			fce.f.Complete(d)
+			fce.f.complete(d)
 		} else {
-			fce.f.CompleteError(err)
+			fce.f.completeError(err)
 		}
 	}()
 }
@@ -82,9 +82,9 @@ func (f *Future) Then(ch CompletionHandler) (nf *Future) {
 
 	nf = NewFuture()
 	fc := futurecompleter{ch,nf}
-	if f.c && f.e == nil {
+	if f.completed && f.e == nil {
 		deliverData(fc,f.r)
-	} else if !f.c  {
+	} else if !f.completed  {
 		f.fcs = append(f.fcs,fc)
 	}
 	return
@@ -112,7 +112,7 @@ func (f *Future) Err(eh ErrorHandler) (nf *Future) {
 	fce := futurecompletererror{eh, nf}
 	if f.e != nil {
 		deliverErr(fce, f.e)
-	} else if !f.c{
+	} else if !f.completed{
 		f.fces = append(f.fces, fce)
 	}
 	return

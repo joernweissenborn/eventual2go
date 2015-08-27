@@ -24,7 +24,7 @@ func TestStreamBasics(t *testing.T) {
 func TestStreamClose(t *testing.T) {
 	sc := NewStreamController()
 	sc.Close()
-	if !sc.Closed().IsComplete() {
+	if !sc.Closed().Completed() {
 		t.Error("channel didnt close")
 	}
 }
