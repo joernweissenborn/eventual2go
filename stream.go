@@ -1,7 +1,6 @@
 package eventual2go
 import (
 	"reflect"
-	"fmt"
 )
 
 // A Stream can be consumed or new streams be derived by registering handler functions.
@@ -212,22 +211,18 @@ func (s *Stream) run() {
 			if !ok {
 				return
 			}
-			fmt.Println("sus")
 				s.subscribe(ss)
 
 		case ss,ok := <-s.remove_subscription:
 			if !ok {
 				return
 			}
-			fmt.Println("unsus")
 			s.unsubscribe(ss)
 
 		case d,ok := <-s.data_in:
 			if !ok {
 				return
 			}
-			fmt.Println("add",s.subscriptions)
-
 			for _, ss := range s.subscriptions {
 				ss.add(d)
 			}
