@@ -20,7 +20,7 @@ func (sc *StreamController) Add(Data Data) {
 func NewStreamController() (sc *StreamController) {
 	sc = new(StreamController)
 	sc.Stream = NewStream()
-	if sc.Stream.Closed == nil {
+	if sc.Stream.Closed() == nil {
 		panic("Stream Init failed")
 	}
 	return
@@ -55,15 +55,14 @@ func (sc *StreamController) JoinFuture(f *Future) {
 	f.Then(addJoinedFuture(sc))
 }
 
-
 func addJoined(sc *StreamController) Subscriber {
 	return func(d Data) {
 		sc.Stream.add(d)
 	}
 }
 
-func addJoinedFuture(sc *StreamController) CompletionHandler{
-	return func(d Data) Data{
+func addJoinedFuture(sc *StreamController) CompletionHandler {
+	return func(d Data) Data {
 		sc.Stream.add(d)
 		return nil
 	}

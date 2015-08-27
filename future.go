@@ -1,8 +1,8 @@
 package eventual2go
 
 import (
-	"sync"
 	"fmt"
+	"sync"
 )
 
 // Creates a new future.
@@ -17,25 +17,25 @@ func NewFuture() (F *Future) {
 // Future is thread-safe struct that can be completed with arbitrary data or failed with an error. Handler functions can
 // be registered for both events and get invoked after completion..
 type Future struct {
-	m *sync.Mutex
-	fcs []futurecompleter
-	fces []futurecompletererror
+	m         *sync.Mutex
+	fcs       []futurecompleter
+	fces      []futurecompletererror
 	completed bool
-	r interface {}
-	e error
+	r         interface{}
+	e         error
 }
 
 // Completes the future with the given data and triggers al registered completion handlers. Panics if the future is already
 // complete.
-func (f *Future) complete(d Data){
+func (f *Future) complete(d Data) {
 	f.m.Lock()
 	defer f.m.Unlock()
 	if f.completed {
-		panic(fmt.Sprint("Completed complete future with",d))
+		panic(fmt.Sprint("Completed complete future with", d))
 	}
 	f.r = d
 	for _, fc := range f.fcs {
-		go deliverData(fc,d)
+		go deliverData(fc, d)
 	}
 	f.completed = true
 }
@@ -44,27 +44,28 @@ func (f *Future) complete(d Data){
 func (f *Future) Completed() bool {
 	return f.completed
 }
+
 // Completes the future with the given error and triggers al registered error handlers. Panics if the future is already
 // complete.
-func (f *Future) completeError(err error){
+func (f *Future) completeError(err error) {
 	f.m.Lock()
 	defer f.m.Unlock()
 	if f.completed {
-		panic(fmt.Sprint("Errorcompleted complete future with",err))
+		panic(fmt.Sprint("Errorcompleted complete future with", err))
 	}
 	f.e = err
 	for _, fce := range f.fces {
-		deliverErr(fce,f.e)
+		deliverErr(fce, f.e)
 	}
 	f.completed = true
 }
 
-func deliverData(fc futurecompleter, d Data){
-		fc.f.complete(fc.cf(d))
+func deliverData(fc futurecompleter, d Data) {
+	fc.f.complete(fc.cf(d))
 }
 
-func deliverErr(fce futurecompletererror, e error){
-	go func(){
+func deliverErr(fce futurecompletererror, e error) {
+	go func() {
 		d, err := fce.ef(e)
 		if err == nil {
 			fce.f.complete(d)
@@ -81,11 +82,11 @@ func (f *Future) Then(ch CompletionHandler) (nf *Future) {
 	defer f.m.Unlock()
 
 	nf = NewFuture()
-	fc := futurecompleter{ch,nf}
+	fc := futurecompleter{ch, nf}
 	if f.completed && f.e == nil {
-		deliverData(fc,f.r)
-	} else if !f.completed  {
-		f.fcs = append(f.fcs,fc)
+		deliverData(fc, f.r)
+	} else if !f.completed {
+		f.fcs = append(f.fcs, fc)
 	}
 	return
 }
@@ -96,7 +97,7 @@ func (f *Future) WaitUntilComplete() {
 }
 
 // Returns the result of the future, nil called before completion or after error completion.
-func (f *Future) GetResult() Data{
+func (f *Future) GetResult() Data {
 	return f.r
 }
 
@@ -112,25 +113,25 @@ func (f *Future) Err(eh ErrorHandler) (nf *Future) {
 	fce := futurecompletererror{eh, nf}
 	if f.e != nil {
 		deliverErr(fce, f.e)
-	} else if !f.completed{
+	} else if !f.completed {
 		f.fces = append(f.fces, fce)
 	}
 	return
 }
 
 // AsChan returns a channel which will receive either the result or the error after completion of the future.
-func (f *Future) AsChan() chan Data{
-	c := make(chan Data,1)
-	cmpl := func(d chan Data) CompletionHandler{
-		return func(e Data)Data{
-			d<-e
+func (f *Future) AsChan() chan Data {
+	c := make(chan Data, 1)
+	cmpl := func(d chan Data) CompletionHandler {
+		return func(e Data) Data {
+			d <- e
 			close(d)
 			return nil
 		}
 	}
-	ecmpl :=func(d chan Data) ErrorHandler{
-		return func(e error)(Data, error){
-			d<-e
+	ecmpl := func(d chan Data) ErrorHandler {
+		return func(e error) (Data, error) {
+			d <- e
 			close(d)
 			return nil, nil
 		}
@@ -140,13 +141,12 @@ func (f *Future) AsChan() chan Data{
 	return c
 }
 
-
 type futurecompleter struct {
 	cf CompletionHandler
-	f *Future
+	f  *Future
 }
 
 type futurecompletererror struct {
 	ef ErrorHandler
-	f *Future
+	f  *Future
 }

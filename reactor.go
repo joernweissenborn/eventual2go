@@ -1,19 +1,18 @@
 package eventual2go
+
 import (
 	"sync"
 )
 
 type Reactor struct {
-
 	m *sync.Mutex
 
 	evtIn *StreamController
-	evtC chan Data
+	evtC  chan Data
 
 	shutdown *Completer
 
 	eventRegister map[string]Subscriber
-
 }
 
 func NewReactor() (r *Reactor) {
@@ -40,7 +39,7 @@ func (r *Reactor) Shutdown() {
 }
 
 func (r *Reactor) Fire(name string, data Data) {
-	r.evtIn.Add(Event{name,data})
+	r.evtIn.Add(Event{name, data})
 }
 
 func (r *Reactor) React(name string, handler Subscriber) {
@@ -55,7 +54,7 @@ func (r *Reactor) AddStream(name string, s *Stream) {
 
 func (r *Reactor) createEventFromStream(name string) Subscriber {
 	return func(d Data) {
-		r.evtIn.Add(Event{name,d})
+		r.evtIn.Add(Event{name, d})
 	}
 }
 
@@ -64,9 +63,9 @@ func (r *Reactor) AddFuture(name string, f *Future) {
 }
 
 func (r *Reactor) createEventFromFuture(name string) CompletionHandler {
-	return func(d Data) Data{
-		if !r.shutdown.Completed(){
-			r.evtIn.Add(Event{name,d})
+	return func(d Data) Data {
+		if !r.shutdown.Completed() {
+			r.evtIn.Add(Event{name, d})
 		}
 		return nil
 	}
@@ -77,16 +76,16 @@ func (r *Reactor) AddFutureError(name string, f *Future) {
 }
 
 func (r *Reactor) createEventFromFutureError(name string) ErrorHandler {
-	return func(e error) (Data,error){
+	return func(e error) (Data, error) {
 		if !r.shutdown.Completed() {
 			r.evtIn.Add(Event{name, e})
 		}
-		return nil,nil
+		return nil, nil
 	}
 }
 
-func (r *Reactor) react()  {
-	for d := range r.evtC{
+func (r *Reactor) react() {
+	for d := range r.evtC {
 		evt := d.(Event)
 		r.m.Lock()
 		if h, f := r.eventRegister[evt.Name]; f {

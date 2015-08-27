@@ -14,20 +14,20 @@ type Subscription struct {
 }
 
 // Creates a new subscription.
-func NewSubscription(s *Stream,  sr Subscriber) (ss *Subscription) {
+func NewSubscription(s *Stream, sr Subscriber) (ss *Subscription) {
 	ss = new(Subscription)
 	ss.sr = sr
 	ss.inC = make(chan Data)
 	ss.doC = make(chan Data)
 	ss.unsubscribe = s.remove_subscription
-//	ss.CloseOnFuture(s.closed)
+	//	ss.CloseOnFuture(s.closed)
 	ss.closed = NewCompleter()
 	go ss.do()
 	go ss.in()
 	return
 }
 
-func (s *Subscription) Closed() *Future{
+func (s *Subscription) Closed() *Future {
 	return s.closed.Future()
 }
 
@@ -42,7 +42,7 @@ func (s *Subscription) in() {
 		if len(pile) == 0 {
 			d, ok := <-s.inC
 
-			if ok && !stop{
+			if ok && !stop {
 				pile = append(pile, d)
 			} else {
 				close(s.doC)
@@ -52,7 +52,7 @@ func (s *Subscription) in() {
 		} else {
 			select {
 			case s.doC <- pile[0]:
-				if len(pile) == 1 && stop{
+				if len(pile) == 1 && stop {
 					close(s.doC)
 					s.closed.Complete(nil)
 					return
@@ -70,12 +70,11 @@ func (s *Subscription) in() {
 	}
 }
 
-func (s *Subscription) do(){
+func (s *Subscription) do() {
 	for d := range s.doC {
 		s.sr(d)
 	}
 }
-
 
 // Terminates the Subscription.
 func (s *Subscription) Close() {
@@ -91,11 +90,11 @@ func (s *Subscription) CloseOnFuture(f *Future) {
 	f.Err(s.closeOnCompleteError)
 }
 
-func (s *Subscription) closeOnComplete(Data)Data{
+func (s *Subscription) closeOnComplete(Data) Data {
 	s.Close()
 	return nil
 }
-func (s *Subscription) closeOnCompleteError(error)(Data,error){
+func (s *Subscription) closeOnCompleteError(error) (Data, error) {
 	s.Close()
 	return nil, nil
 }

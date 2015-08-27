@@ -32,11 +32,12 @@ func TestStreamClose(t *testing.T) {
 func TestStreamCancelSub(t *testing.T) {
 	sc := NewStreamController()
 	a := false
-	ss := sc.Listen(func(d Data){
-		a=true})
+	ss := sc.Listen(func(d Data) {
+		a = true
+	})
 	ss.Close()
 	sc.Add(0)
-	time.Sleep(1*time.Millisecond)
+	time.Sleep(1 * time.Millisecond)
 	if a {
 		t.Error("subscription didn't cancel")
 	}
@@ -46,21 +47,22 @@ func TestStreamCancelSub(t *testing.T) {
 
 	b := false
 	c := NewCompleter()
-	sc.Listen(func(Data){b=true}).CloseOnFuture(c.Future())
+	sc.Listen(func(Data) { b = true }).CloseOnFuture(c.Future())
 	c.Complete(0)
-	time.Sleep(1*time.Millisecond)
+	time.Sleep(1 * time.Millisecond)
 
 	sc.Add(0)
-	time.Sleep(1*time.Millisecond)
+	time.Sleep(1 * time.Millisecond)
 
 	if b {
 		t.Error("subscription didn't cancel")
 	}
 
-	ss = sc.Listen(func(d Data){
-		a=true})
+	ss = sc.Listen(func(d Data) {
+		a = true
+	})
 	sc.Close()
-	time.Sleep(1*time.Millisecond)
+	time.Sleep(1 * time.Millisecond)
 	if !ss.Closed().Completed() {
 		t.Error("subscription future didn't complete")
 	}
@@ -167,7 +169,7 @@ func TestStreamSplit(t *testing.T) {
 func TestStreamTransformer(t *testing.T) {
 	sc := NewStreamController()
 	defer sc.Close()
-	c :=  sc.Transform(func(d Data) Data { return d.(int) * 2 }).AsChan()
+	c := sc.Transform(func(d Data) Data { return d.(int) * 2 }).AsChan()
 	sc.Add(5)
 	select {
 	case <-time.After(1 * time.Millisecond):
@@ -178,5 +180,3 @@ func TestStreamTransformer(t *testing.T) {
 		}
 	}
 }
-
-
