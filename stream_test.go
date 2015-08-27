@@ -25,7 +25,32 @@ func TestStreamClose(t *testing.T) {
 	sc := NewStreamController()
 	sc.Close()
 	if !sc.Closed().Completed() {
-		t.Error("channel didnt close")
+		t.Error("stream didnt close")
+	}
+}
+
+func TestStreamCancelSub(t *testing.T) {
+	sc := NewStreamController()
+	defer sc.Close()
+	a := false
+	sc.Listen(func(d Data){
+		a=true}).Close()
+	sc.Add(0)
+	time.Sleep(1*time.Millisecond)
+	if a {
+		t.Error("subscription didn't cancel")
+	}
+
+	b := false
+	c := NewCompleter()
+	sc.Listen(func(Data){b=true}).CloseOnFuture(c.Future())
+	c.Complete(0)
+
+	sc.Add(0)
+	time.Sleep(1*time.Millisecond)
+
+	if b {
+		t.Error("subscription didn't cancel")
 	}
 }
 

@@ -1,4 +1,8 @@
 package eventual2go
+import (
+	"reflect"
+	"fmt"
+)
 
 // A Stream can be consumed or new streams be derived by registering handler functions.
 type Stream struct {
@@ -38,16 +42,30 @@ func (s *Stream) subscribe(ss *Subscription ) {
 
 func (s *Stream) unsubscribe(rss *Subscription ) {
 	index := -1
+	rssp := reflect.ValueOf(rss).Pointer()
 	for i , ss := range s.subscriptions {
-		if ss == rss {
+		if reflect.ValueOf(ss).Pointer() == rssp {
 			index = i
-			return
+			break
 		}
 	}
 	if index != -1 {
 		l := len(s.subscriptions)
-		s.subscriptions[index] = s.subscriptions[l-1]
-		s.subscriptions = s.subscriptions[:2]
+		s.subscriptions[index].close()
+		switch l {
+		case 1:
+			s.subscriptions = []*Subscription{}
+		case 2:
+			if index == 0 {
+				s.subscriptions[0] = s.subscriptions[1]
+			}
+			s.subscriptions = s.subscriptions[:1]
+		default:
+			s.subscriptions[index] = s.subscriptions[l-1]
+			s.subscriptions = s.subscriptions[:l-1]
+
+		}
+
 	}
 }
 
@@ -60,11 +78,11 @@ func (s *Stream) close(Data) Data{
 
 
 // Closes a Stream and cancels all subscriptions.
-func (s Stream) Close() {
+func (s *Stream) Close() {
 	s.closed.Complete(nil)
 }
 
-func (s Stream) Closed() *Future{
+func (s *Stream) Closed() *Future{
 	return s.closed.Future()
 }
 
@@ -73,11 +91,10 @@ func (s Stream) Closed() *Future{
 func (s *Stream) Listen(sr Subscriber) (ss *Subscription) {
 	ss = NewSubscription(s, sr)
 	s.add_subscription <- ss
-	ss.Closed().Then(s.removeSubscription(ss))
 	return
 }
 
-func (s *Stream) removeSubscription(ss *Subscription)CompletionHandler {
+func (s *Stream) removeSubscription(ss *Subscription) CompletionHandler {
 	return func(Data) Data {
 		if !s.closed.Completed(){
 			s.remove_subscription <- ss
@@ -100,7 +117,7 @@ func transform(s *Stream, t Transformer) Subscriber {
 }
 
 // Registers a Filter and returns the filtered stream. Elements will be added if the Filter returns TRUE.
-func (s Stream) Where(f Filter) (fs *Stream) {
+func (s *Stream) Where(f Filter) (fs *Stream) {
 	fs = NewStream()
 	s.Listen(filter(fs,f)).CloseOnFuture(fs.closed.Future())
 	return
@@ -195,18 +212,22 @@ func (s *Stream) run() {
 			if !ok {
 				return
 			}
-			s.subscribe(ss)
+			fmt.Println("sus")
+				s.subscribe(ss)
 
 		case ss,ok := <-s.remove_subscription:
 			if !ok {
 				return
 			}
+			fmt.Println("unsus")
 			s.unsubscribe(ss)
 
 		case d,ok := <-s.data_in:
 			if !ok {
 				return
 			}
+			fmt.Println("add",s.subscriptions)
+
 			for _, ss := range s.subscriptions {
 				ss.add(d)
 			}
