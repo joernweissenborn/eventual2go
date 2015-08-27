@@ -1,52 +1,81 @@
 package eventual2go
 
-// Creates a new subscription.
-func NewSubscription(index int, close chan int, sr Subscriber) (s Subscription) {
-	s.in = make(chan Data)
-	s.add = make(streamchannel)
-	go s.add.pipe(s.in)
-	s.index = index
-	s.close = close
-	s.sr = sr
-	go s.run()
-	return
-}
-
 // Subscription invokes a Subscriber when data is added to the consumed stream. It is also used for terminating a
 // Subscription.
 type Subscription struct {
-	in    chan Data
-	add   streamchannel
-	index int
-	close chan int
-
 	sr Subscriber
+
+	inC chan Data
+	doC chan Data
+
+	closed *Future
+
 }
 
-func (s Subscription) run() {
-	for d := range s.in {
-		s.sr(d)
+// Creates a new subscription.
+func NewSubscription(s *Stream,  sr Subscriber) (ss *Subscription) {
+	ss = new(Subscription)
+	ss.sr = sr
+	ss.inC = make(chan Data)
+	ss.doC = make(chan Data)
+//	ss.CloseOnFuture(s.closed)
+	ss.closed = NewFuture()
+	go ss.do()
+	go ss.in()
+	return
+}
+
+func (s *Subscription) add(d Data) {
+	s.inC <- d
+}
+
+func (s *Subscription) in() {
+	pile := []interface{}{}
+	for {
+		if len(pile) == 0 {
+			pile = append(pile, <-s.inC)
+		} else {
+			select {
+			case s.doC <- pile[0]:
+				pile = pile[1:]
+				if len(pile) == 0 && s.closed.IsComplete(){
+					close(s.doC)
+					return
+				}
+			case d, ok := <-s.inC:
+				if ok {
+					pile = append(pile, d)
+				}
+
+			}
+		}
 	}
 }
 
-// Terminates the Subscription.
-func (s Subscription) Close() {
-	defer func() { recover() }()
-	s.close <- s.index
+func (s *Subscription) do(){
+	for d := range s.doC {
+		s.sr(d)
+	}
+	s.closed.Complete(nil)
+}
 
+
+// Terminates the Subscription.
+func (s *Subscription) Close() {
+	close(s.inC)
 }
 
 // Terminates the Subscription when the Future (error-) completes.
-func (s Subscription) CloseOnFuture(f *Future) {
+func (s *Subscription) CloseOnFuture(f *Future) {
 	f.Then(s.closeOnComplete)
 	f.Err(s.closeOnCompleteError)
 }
 
-func (s Subscription) closeOnComplete(Data)Data{
+func (s *Subscription) closeOnComplete(Data)Data{
 	s.Close()
 	return nil
 }
-func (s Subscription) closeOnCompleteError(error)(Data,error){
+func (s *Subscription) closeOnCompleteError(error)(Data,error){
 	s.Close()
 	return nil, nil
 }

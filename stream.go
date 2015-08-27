@@ -1,162 +1,170 @@
 package eventual2go
 
+// A Stream can be consumed or new streams be derived by registering handler functions.
+type Stream struct {
+
+	add_subscription chan *Subscription
+	remove_subscription chan *Subscription
+	data_in chan Data
+
+	subscriptions []*Subscription
+	closed *Future
+}
+
 //Returns a new stream. Data can not be added to a Stream manually, use a StreamController instead.
-func NewStream() (s Stream) {
-	s.in = make(chan Data)
-	s.addsus = make(chan addsuscrption)
-	s.rmsusc = make(chan int)
-	s.Closed = NewFuture()
+func NewStream() (s *Stream) {
+	s = new(Stream)
+	s.add_subscription = make(chan *Subscription)
+	s.remove_subscription = make(chan *Subscription)
+	s.data_in = make(chan Data)
+
+	// closing
+	s.closed = NewFuture()
+	s.closed.Then(s.close)
+
 	go s.run()
 	return
 }
 
-// A Stream can be consumed or new streams be derived by registering handler functions.
-type Stream struct {
-	in chan Data
-
-	addsus chan addsuscrption
-	rmsusc chan int
-
-	Closed *Future
+func (s *Stream) add_data(d Data) {
+	for _, ss := range s.subscriptions {
+		ss.add(d)
+	}
 }
 
-type addsuscrption struct {
-	sr Subscriber
-	c  chan Subscription
+func (s *Stream) subscribe(ss *Subscription ) {
+	s.subscriptions = append(s.subscriptions,ss)
 }
+
+func (s *Stream) unsubscribe(rss *Subscription ) {
+	index := -1
+	for i , ss := range s.subscriptions {
+		if ss == rss {
+			index = i
+			return
+		}
+	}
+	if index != -1 {
+		l := len(s.subscriptions)
+		s.subscriptions[index] = s.subscriptions[l-1]
+		s.subscriptions = s.subscriptions[:2]
+	}
+}
+
+func (s *Stream) close(Data) Data{
+	close(s.add_subscription)
+	close(s.remove_subscription)
+	close(s.data_in)
+	return nil
+}
+
 
 // Closes a Stream and cancels all subscriptions.
 func (s Stream) Close() {
-	close(s.addsus)
-	close(s.rmsusc)
-	close(s.in)
-	s.Closed.Complete(nil)
+	s.closed.Complete(nil)
 }
 
-func (s Stream) run() {
-
-	suscribtions := map[int]Subscription{}
-	nextSusIndex := 0
-
-	ok := true
-
-	for ok {
-		select {
-
-		case sus, ok := <-s.addsus:
-			if !ok {
-				return
-			}
-			sc := NewSubscription(nextSusIndex, s.rmsusc, sus.sr)
-			suscribtions[nextSusIndex] = sc
-			sus.c <- sc
-			nextSusIndex++
-
-		case index, ok := <-s.rmsusc:
-			if !ok {
-				return
-			}
-			delete(suscribtions, index)
-
-		case d, ok := <-s.in:
-			if !ok {
-				return
-			}
-			for _, sc := range suscribtions {
-				sc.add <- d
-			}
-		}
-	}
+func (s Stream) Closed() *Future{
+	return s.closed
 }
 
-func (s Stream) add(d Data) {
-	s.in <- d
-	return
-}
 
 // Registers a subscriber. Returns Subscription, which can be used to terminate the subcription.
-func (s Stream) Listen(sr Subscriber) (ss Subscription) {
-	if s.Closed == nil {
-		panic("Listen on uninitialized stream")
-	}
-	c := make(chan Subscription)
-	s.addsus <- addsuscrption{sr, c}
-	return <-c
-}
-
-// Registers a Transformer and returns the transformed stream.
-func (s Stream) Transform(t Transformer) (ts Stream) {
-	ts = NewStream()
-	s.Listen(func(d Data) {
-		ts.add(t(d))
-	})
+func (s *Stream) Listen(sr Subscriber) (ss *Subscription) {
+	ss = NewSubscription(s, sr)
+	s.add_subscription <- ss
+	ss.closed.Then(s.removeSubscription(ss))
 	return
 }
 
-// Registers a Filter and returns the filtered stream. Elements will be added if the Filter returns TRUE.
-func (s Stream) Where(f Filter) (fs Stream) {
-	fs = NewStream()
-	s.Listen(func(d Data) {
-		if f(d) {
-			fs.add(d)
+func (s *Stream) removeSubscription(ss *Subscription)CompletionHandler {
+	return func(Data) Data {
+		if !s.closed.IsComplete(){
+			s.remove_subscription <- ss
 		}
-	})
-
-	return
-}
-
-// Registers a Filter and returns the filtered stream. Elements will be added if the Filter returns FALSE.
-func (s Stream) WhereNot(f Filter) (fs Stream) {
-	fs = NewStream()
-	s.Listen(func(d Data) {
-		if !f(d) {
-			fs.add(d)
-		}
-	})
-
-	return
-}
-
-// Returns a future that will be completed with the first element added to the stream.
-func (s Stream) First() (f *Future) {
-	f = NewFuture()
-	ss := s.Listen(func(d Data) {
-		if !f.IsComplete(){
-			f.Complete(d)
-		}
-	})
-	f.Then(removeSub(ss))
-	return
-}
-
-func removeSub(ss Subscription) CompletionHandler{
-	return func(Data) Data{
-		ss.Close()
 		return nil
 	}
 }
 
+// Registers a Transformer and returns the transformed stream.
+func (s *Stream) Transform(t Transformer) (ts *Stream) {
+	ts = NewStream()
+	s.Listen(transform(ts,t)).CloseOnFuture(ts.closed)
+	return
+}
+
+func transform(s *Stream, t Transformer) Subscriber {
+	return func(d Data) {
+		s.add(t(d))
+	}
+}
+
+// Registers a Filter and returns the filtered stream. Elements will be added if the Filter returns TRUE.
+func (s Stream) Where(f Filter) (fs *Stream) {
+	fs = NewStream()
+	s.Listen(filter(fs,f)).CloseOnFuture(fs.closed)
+	return
+}
+
+func filter(s *Stream, f Filter) Subscriber {
+	return func(d Data) {
+		if f(d) {
+			s.add(d)
+		}
+	}
+}
+
+// Registers a Filter and returns the filtered stream. Elements will be added if the Filter returns FALSE.
+func (s *Stream) WhereNot(f Filter) (fs *Stream) {
+	fs = NewStream()
+	s.Listen(filterNot(fs,f)).CloseOnFuture(fs.closed)
+	return
+}
+
+func filterNot(s *Stream, f Filter) Subscriber {
+	return func(d Data) {
+		if !f(d) {
+			s.add(d)
+		}
+	}
+}
+
+
+// Returns a future that will be completed with the first element added to the stream.
+func (s *Stream) First() (f *Future) {
+	f = NewFuture()
+	s.Listen(first(f)).CloseOnFuture(f)
+	return
+}
+
+func first(f *Future) Subscriber{
+	return func(d Data ){
+		if !f.IsComplete(){
+			f.Complete(d)
+		}
+	}
+}
+
 // Returns a future that will be completed with the first element added to the stream where filter returns TRUE.
-func (s Stream) FirstWhere(f Filter) *Future {
+func (s *Stream) FirstWhere(f Filter) *Future {
 	return s.Where(f).First()
 }
 
 // Returns a future that will be completed with the first element added to the stream where filter returns FALSE.
-func (s Stream) FirstWhereNot(f Filter) *Future {
+func (s *Stream) FirstWhereNot(f Filter) *Future {
 	return s.WhereNot(f).First()
 }
 
 // Returns a stream with all elements where the filter returns TRUE and one where the filter returns FALSE.
-func (s Stream) Split(f Filter) (ts Stream, fs Stream) {
+func (s *Stream) Split(f Filter) (ts *Stream, fs *Stream) {
 	return s.Where(f), s.WhereNot(f)
 }
 
 // AsChan returns a channel where all items will be pushed. Note items while be queued in a fifo since the stream must
 // not block.
-func (s Stream) AsChan() (c chan Data){
+func (s *Stream) AsChan() (c chan Data){
 	c = make(chan Data)
-	s.Closed.Then(closeChan(c))
-	s.Listen(pipeToChan(c))
+	s.Listen(pipeToChan(c)).closed.Then(closeChan(c))
 	return
 }
 
@@ -170,4 +178,42 @@ func closeChan(c chan Data) CompletionHandler{
 		close(c)
 		return nil
 	}
+}
+
+func (s *Stream) add(d Data) {
+	s.data_in <- d
+	return
+}
+
+func (s *Stream) run() {
+	for {
+
+		select {
+
+		case ss,ok := <-s.add_subscription:
+			if !ok {
+				return
+			}
+			s.subscribe(ss)
+
+		case ss,ok := <-s.remove_subscription:
+			if !ok {
+				return
+			}
+			s.unsubscribe(ss)
+
+		case d,ok := <-s.data_in:
+			if !ok {
+				return
+			}
+			for _, ss := range s.subscriptions {
+				ss.add(d)
+			}
+
+
+		}
+
+
+	}
+
 }

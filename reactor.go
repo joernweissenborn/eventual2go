@@ -7,7 +7,7 @@ type Reactor struct {
 
 	m *sync.Mutex
 
-	evtIn StreamController
+	evtIn *StreamController
 	evtC chan Data
 
 	shutdown *Future
@@ -49,7 +49,7 @@ func (r *Reactor) React(name string, handler Subscriber) {
 	r.eventRegister[name] = handler
 }
 
-func (r *Reactor) AddStream(name string, s Stream) {
+func (r *Reactor) AddStream(name string, s *Stream) {
 	s.Listen(r.createEventFromStream(name)).CloseOnFuture(r.shutdown)
 }
 
