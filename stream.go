@@ -26,8 +26,8 @@ func NewStream() (s *Stream) {
 		NewCompleter(),
 		make(chan struct{}),
 	}
-		go s.run()
-	}
+	go s.run()
+
 	return
 }
 

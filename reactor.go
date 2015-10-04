@@ -8,7 +8,6 @@ type Reactor struct {
 	m *sync.Mutex
 
 	evtIn *StreamController
-	evtC  chan Data
 
 	shutdown *Completer
 
@@ -20,12 +19,11 @@ func NewReactor() (r *Reactor) {
 	r = &Reactor{
 		new(sync.Mutex),
 		NewStreamController(),
-		r.evtIn.AsChan(),
 		NewCompleter(),
 		map[string]Subscriber{},
 	}
 
-	go r.react()
+	go r.react(r.evtIn.AsChan())
 
 	return
 }
@@ -81,8 +79,9 @@ func (r *Reactor) createEventFromFutureError(name string) ErrorHandler {
 	}
 }
 
-func (r *Reactor) react() {
-	for d := range r.evtC {
+func (r *Reactor) react(c chan Data) {
+
+	for d := range c {
 		evt := d.(Event)
 		r.m.Lock()
 		if h, f := r.eventRegister[evt.Name]; f {
