@@ -3,7 +3,7 @@ package eventual2go
 type Collector struct {
 	r      *Reactor
 	pile   []Data
-	remove *Future
+	remove *Completer
 }
 
 func NewCollector() (c *Collector) {
@@ -11,7 +11,7 @@ func NewCollector() (c *Collector) {
 	c = &Collector{
 		NewReactor(),
 		[]Data{},
-		NewFuture(),
+		NewCompleter(),
 	}
 
 	c.r.React("add", c.collect)
@@ -21,12 +21,17 @@ func NewCollector() (c *Collector) {
 	return
 }
 
+func (c *Collector) Remove() {
+	c.r.Shutdown()
+	c.remove.Complete(nil)
+}
+
 func (c *Collector) Add(d Data) {
 	c.r.Fire("add", d)
 }
 
 func (c *Collector) AddStream(s *Stream) {
-	s.Listen(c.Add)
+	s.Listen(c.Add).CloseOnFuture(c.remove.Future())
 }
 
 func (c *Collector) AddFuture(f *Future) {
