@@ -8,8 +8,7 @@ type Completer struct {
 
 // Creates a new Completer.
 func NewCompleter() (c *Completer) {
-	c = new(Completer)
-	c.f = NewFuture()
+	c = &Completer{NewFuture()}
 	return
 }
 

@@ -7,10 +7,14 @@ import (
 
 // Creates a new future.
 func NewFuture() (F *Future) {
-	F = new(Future)
-	F.m = new(sync.Mutex)
-	F.fcs = []futurecompleter{}
-	F.fces = []futurecompletererror{}
+	F = &Future{
+		new(sync.Mutex),
+		[]futurecompleter{},
+		[]futurecompletererror{},
+		false,
+		nil,
+		nil,
+	}
 	return
 }
 

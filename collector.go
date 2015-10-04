@@ -60,6 +60,14 @@ func (c *Collector) Get() (d Data) {
 	return
 }
 
+func (c *Collector) Preview() (d Data) {
+	cd := make(chan Data)
+	defer close(cd)
+	c.r.Fire("preview", cd)
+	d = <-cd
+	return
+}
+
 func (c *Collector) Empty() (e bool) {
 	cd := make(chan bool)
 	defer close(cd)
@@ -85,6 +93,15 @@ func (c *Collector) get(d Data) {
 		cd <- nil
 	}
 
+}
+
+func (c *Collector) preview(d Data) {
+	cd := d.(chan Data)
+	if len(c.pile) != 0 {
+		cd <- c.pile[0]
+	} else {
+		cd <- nil
+	}
 }
 
 func (c *Collector) empty(d Data) {

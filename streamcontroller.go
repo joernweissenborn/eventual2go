@@ -18,8 +18,7 @@ func (sc *StreamController) Add(Data Data) {
 
 // Creates a new StreamController.
 func NewStreamController() (sc *StreamController) {
-	sc = new(StreamController)
-	sc.Stream = NewStream()
+	sc = &StreamController{sc.Stream}
 	if sc.Stream.Closed() == nil {
 		panic("Stream Init failed")
 	}

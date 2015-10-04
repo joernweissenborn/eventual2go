@@ -17,16 +17,13 @@ type Reactor struct {
 
 func NewReactor() (r *Reactor) {
 
-	r = new(Reactor)
-
-	r.m = new(sync.Mutex)
-
-	r.evtIn = NewStreamController()
-	r.evtC = r.evtIn.AsChan()
-
-	r.shutdown = NewCompleter()
-
-	r.eventRegister = map[string]Subscriber{}
+	r = &Reactor{
+		new(sync.Mutex),
+		NewStreamController(),
+		r.evtIn.AsChan(),
+		NewCompleter(),
+		map[string]Subscriber{},
+	}
 
 	go r.react()
 

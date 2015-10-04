@@ -18,15 +18,16 @@ type Stream struct {
 
 //Returns a new stream. Data can not be added to a Stream manually, use a StreamController instead.
 func NewStream() (s *Stream) {
-	s = new(Stream)
-	s.add_subscription = make(chan *Subscription)
-	s.remove_subscription = make(chan *Subscription)
-	s.data_in = make(chan Data)
-
-	// closing
-	s.closed = NewCompleter()
-	s.stop = make(chan struct{})
-	go s.run()
+	s = &Stream{
+		make(chan *Subscription),
+		make(chan *Subscription),
+		make(chan Data),
+		[]*Subscription{},
+		NewCompleter(),
+		make(chan struct{}),
+	}
+		go s.run()
+	}
 	return
 }
 
