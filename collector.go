@@ -17,6 +17,7 @@ func NewCollector() (c *Collector) {
 	c.r.React("add", c.collect)
 	c.r.React("get", c.get)
 	c.r.React("empty", c.empty)
+	c.r.React("preview", c.preview)
 
 	return
 }

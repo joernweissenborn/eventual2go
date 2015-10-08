@@ -22,7 +22,20 @@ func TestCollector(t *testing.T) {
 		t.Error("Collector is still empty after add")
 	}
 
-	d, ok := c.Get().(string)
+	d, ok := c.Preview().(string)
+
+	if !ok {
+		t.Error("Wrong Data Type", d)
+	}
+	if d != "bla" {
+		t.Error("Wrong data", d)
+	}
+
+	if c.Empty() {
+		t.Error("Collector is empty after preview")
+	}
+
+	d, ok = c.Get().(string)
 
 	if !ok {
 		t.Error("Wrong Data Type", d)
