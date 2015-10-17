@@ -2,6 +2,7 @@ package eventual2go
 
 import (
 	"sync"
+	"time"
 )
 
 type Reactor struct {
@@ -35,6 +36,19 @@ func (r *Reactor) Shutdown() {
 
 func (r *Reactor) Fire(name string, data Data) {
 	r.evtIn.Add(Event{name, data})
+}
+
+func (r *Reactor) FireEvery(name string, data Data, interval time.Duration) {
+	go r.fireEvery(name, data, interval)
+}
+
+func (r *Reactor) fireEvery(name string, data Data, d time.Duration) {
+	c := true
+	for c {
+		time.Sleep(d)
+		r.evtIn.Add(Event{name, data})
+		c = !r.shutdown.Completed()
+	}
 }
 
 func (r *Reactor) React(name string, handler Subscriber) {
