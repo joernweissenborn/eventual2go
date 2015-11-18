@@ -1,6 +1,8 @@
 package eventual2go
 
 import (
+	"os"
+	"os/signal"
 	"sync"
 	"time"
 )
@@ -82,6 +84,18 @@ func (r *Reactor) createEventFromFuture(name string) CompletionHandler {
 
 func (r *Reactor) AddFutureError(name string, f *Future) {
 	f.Err(r.createEventFromFutureError(name))
+}
+
+func (r *Reactor) CatchCtrlC() {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	go r.waitForInterrupt(c)
+}
+
+func (r *Reactor) waitForInterrupt(c chan os.Signal) {
+	defer close(c)
+	<-c
+	r.Shutdown()
 }
 
 func (r *Reactor) createEventFromFutureError(name string) ErrorHandler {
