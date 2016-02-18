@@ -1,0 +1,91 @@
+package {{.PkgName}}
+
+import "github.com/joernweissenborn/eventual2go"
+
+type {{.TypeName}}Completer struct {
+	*eventual2go.Completer
+}
+
+func (c *{{.TypeName}}Completer) Complete(d {{.TypeName}}) {
+	c.Completer.Complete(d)
+}
+
+func (c *{{.TypeName}}Completer) Future() *{{.TypeName}}Future {
+	return &{{.TypeName}}Future{c.Completer.Future()}
+}
+
+type {{.TypeName}}Future struct {
+	*eventual2go.Future
+}
+
+type {{.TypeName}}CompletionHandler func({{.TypeName}}) {{.TypeName}}
+
+func (ch {{.TypeName}}CompletionHandler) toCompletionHandler() eventual2go.CompletionHandler {
+	return func(d eventual2go.Data) eventual2go.Data {
+		return ch(d.({{.TypeName}}))
+	}
+}
+
+func (f *{{.TypeName}}Future) Then(ch {{.TypeName}}CompletionHandler) *{{.TypeName}}Future {
+	return &{{.TypeName}}Future{f.Future.Then(ch.toCompletionHandler())}
+}
+
+type {{.TypeName}}Stream struct {
+	*eventual2go.Stream
+}
+
+type {{.TypeName}}Suscriber func({{.TypeName}})
+
+func (l {{.TypeName}}Suscriber) toSuscriber() eventual2go.Subscriber {
+	return func(d eventual2go.Data) { l(d.({{.TypeName}})) }
+}
+
+func (s *{{.TypeName}}Stream) Listen(ss {{.TypeName}}Suscriber) *eventual2go.Subscription{
+	return s.Stream.Listen(ss.toSuscriber())
+}
+
+type {{.TypeName}}Filter func({{.TypeName}}) bool
+
+func (f {{.TypeName}}Filter) toFilter() eventual2go.Filter {
+	return func(d eventual2go.Data) bool { return f(d.({{.TypeName}})) }
+}
+
+func (s *{{.TypeName}}Stream) Where(f {{.TypeName}}Filter) {
+	s.Stream.Where(f.toFilter())
+}
+
+func (s *{{.TypeName}}Stream) WhereNot(f {{.TypeName}}Filter) {
+	s.Stream.WhereNot(f.toFilter())
+}
+
+func (s *{{.TypeName}}Stream) First() *{{.TypeName}}Future {
+	return &{{.TypeName}}Future{s.Stream.First()}
+}
+
+func (s *{{.TypeName}}Stream) FirstWhere(f {{.TypeName}}Filter) *{{.TypeName}}Future {
+	return &{{.TypeName}}Future{s.Stream.FirstWhere(f.toFilter())}
+}
+
+func (s *{{.TypeName}}Stream) FirstWhereNot(f {{.TypeName}}Filter) *{{.TypeName}}Future {
+	return &{{.TypeName}}Future{s.Stream.FirstWhereNot(f.toFilter())}
+}
+
+func (s *{{.TypeName}}Stream) AsChan() (c chan {{.TypeName}}) {
+	c = make(chan {{.TypeName}})
+	s.Listen(pipeToChan(c)).Closed().Then(closeChan(c))
+	return
+}
+
+func pipeToChan(c chan {{.TypeName}}) {{.TypeName}}Suscriber {
+	return func(d {{.TypeName}}) {
+		c<-d
+	}
+}
+
+func closeChan(c chan {{.TypeName}}) eventual2go.CompletionHandler {
+	return func(d eventual2go.Data) eventual2go.Data {
+		close(c)
+		return nil
+	}
+}
+
