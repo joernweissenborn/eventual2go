@@ -2,30 +2,45 @@ package eventual2go
 
 // A StreamController is Stream where elements can be added manually or other Streams joined in.
 type StreamController struct {
-	*Stream
+	s *Stream
 }
 
-// Adds an element to the stream.
+// Add adds an element to the stream.
 func (sc *StreamController) Add(Data Data) {
-	if sc.closed == nil {
+	if sc.s.closed == nil {
 		panic("Add on noninitialized StreamController")
 	}
-	if sc.Stream.closed.Completed() {
+	if sc.s.closed.Completed() {
 		panic("Add on closed stream")
 	}
-	sc.Stream.add(Data)
+	sc.s.add(Data)
 }
 
-// Creates a new StreamController.
+// Stream return the underlying stream.
+func (sc *StreamController) Stream() *Stream {
+	return sc.s
+}
+
+// Close closes the underlying stream.
+func (sc *StreamController) Close() {
+	sc.s.Close()
+}
+
+// Closed returns a future which is completed when the underlying stream is closed.
+func (sc *StreamController) Closed() *Future {
+	return sc.s.Closed()
+}
+
+// NewStreamController creates a new StreamController.
 func NewStreamController() (sc *StreamController) {
 	sc = &StreamController{NewStream()}
-	if sc.Stream.Closed() == nil {
+	if sc.s.Closed() == nil {
 		panic("Stream Init failed")
 	}
 	return
 }
 
-// Joins a stream. All elements from the source will be added to the stream
+// Join joins a stream. All elements from the source will be added to the stream
 func (sc *StreamController) Join(s *Stream) {
 	if s.closed == nil {
 		panic("Join noninitialized Stream")
@@ -33,22 +48,22 @@ func (sc *StreamController) Join(s *Stream) {
 	if s.closed.Completed() {
 		panic("Join closed Stream")
 	}
-	if sc.closed == nil {
+	if sc.s.closed == nil {
 		panic("Join on noninitialized Streamcontroller")
 	}
-	if sc.closed.Completed() {
+	if sc.s.closed.Completed() {
 		panic("Join on closed Streamcontroller")
 	}
 	ss := s.Listen(addJoined(sc))
-	ss.CloseOnFuture(sc.closed.Future())
+	ss.CloseOnFuture(sc.s.closed.Future())
 }
 
-// Joins a future completion event.
+// JoinFuture joins a future completion event.
 func (sc *StreamController) JoinFuture(f *Future) {
-	if sc.closed == nil {
+	if sc.s.closed == nil {
 		panic("Join on noninitialized Streamcontroller")
 	}
-	if sc.closed.Completed() {
+	if sc.s.closed.Completed() {
 		panic("Join on closed Streamcontroller")
 	}
 	f.Then(addJoinedFuture(sc))
@@ -56,13 +71,13 @@ func (sc *StreamController) JoinFuture(f *Future) {
 
 func addJoined(sc *StreamController) Subscriber {
 	return func(d Data) {
-		sc.Stream.add(d)
+		sc.s.add(d)
 	}
 }
 
 func addJoinedFuture(sc *StreamController) CompletionHandler {
 	return func(d Data) Data {
-		sc.Stream.add(d)
+		sc.s.add(d)
 		return nil
 	}
 }

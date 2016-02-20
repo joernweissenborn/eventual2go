@@ -15,6 +15,10 @@ type StringSliceCompleter struct {
 	*eventual2go.Completer
 }
 
+func NewStringSliceCompleter() *StringSliceCompleter {
+	return &StringSliceCompleter{eventual2go.NewCompleter()}
+}
+
 func (c *StringSliceCompleter) Complete(d []string) {
 	c.Completer.Complete(d)
 }
@@ -39,6 +43,50 @@ func (f *StringSliceFuture) Then(ch StringSliceCompletionHandler) *StringSliceFu
 	return &StringSliceFuture{f.Future.Then(ch.toCompletionHandler())}
 }
 
+func (f *StringSliceFuture) AsChan() chan []string {
+	c := make(chan []string, 1)
+	cmpl := func(d chan []string) StringSliceCompletionHandler {
+		return func(e []string) []string {
+			d <- e
+			close(d)
+			return e
+		}
+	}
+	ecmpl := func(d chan []string) eventual2go.ErrorHandler {
+		return func(error) (eventual2go.Data, error) {
+			close(d)
+			return nil, nil
+		}
+	}
+	f.Then(cmpl(c))
+	f.Err(ecmpl(c))
+	return c
+}
+
+type StringSliceStreamController struct {
+	*eventual2go.StreamController
+}
+
+func NewStringSliceStreamController() *StringSliceStreamController {
+	return &StringSliceStreamController{eventual2go.NewStreamController()}
+}
+
+func (sc *StringSliceStreamController) Add(d []string) {
+	sc.StreamController.Add(d)
+}
+
+func (sc *StringSliceStreamController) Join(s *StringSliceStream) {
+	sc.StreamController.Join(s.Stream)
+}
+
+func (sc *StringSliceStreamController) JoinFuture(f *StringSliceFuture) {
+	sc.StreamController.JoinFuture(f.Future)
+}
+
+func (sc *StringSliceStreamController) Stream() *StringSliceStream {
+	return &StringSliceStream{sc.StreamController.Stream()}
+}
+
 type StringSliceStream struct {
 	*eventual2go.Stream
 }
@@ -49,7 +97,7 @@ func (l StringSliceSuscriber) toSuscriber() eventual2go.Subscriber {
 	return func(d eventual2go.Data) { l(d.([]string)) }
 }
 
-func (s *StringSliceStream) Listen(ss StringSliceSuscriber) *eventual2go.Subscription{
+func (s *StringSliceStream) Listen(ss StringSliceSuscriber) *eventual2go.Subscription {
 	return s.Stream.Listen(ss.toSuscriber())
 }
 
@@ -59,12 +107,12 @@ func (f StringSliceFilter) toFilter() eventual2go.Filter {
 	return func(d eventual2go.Data) bool { return f(d.([]string)) }
 }
 
-func (s *StringSliceStream) Where(f StringSliceFilter) {
-	s.Stream.Where(f.toFilter())
+func (s *StringSliceStream) Where(f StringSliceFilter) *StringSliceStream {
+	return &StringSliceStream{s.Stream.Where(f.toFilter())}
 }
 
-func (s *StringSliceStream) WhereNot(f StringSliceFilter) {
-	s.Stream.WhereNot(f.toFilter())
+func (s *StringSliceStream) WhereNot(f StringSliceFilter) *StringSliceStream {
+	return &StringSliceStream{s.Stream.WhereNot(f.toFilter())}
 }
 
 func (s *StringSliceStream) First() *StringSliceFuture {
@@ -87,7 +135,7 @@ func (s *StringSliceStream) AsChan() (c chan []string) {
 
 func pipeToStringSliceChan(c chan []string) StringSliceSuscriber {
 	return func(d []string) {
-		c<-d
+		c <- d
 	}
 }
 
@@ -97,4 +145,3 @@ func closeStringSliceChan(c chan []string) eventual2go.CompletionHandler {
 		return nil
 	}
 }
-

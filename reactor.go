@@ -26,7 +26,7 @@ func NewReactor() (r *Reactor) {
 		map[string]Subscriber{},
 	}
 
-	go r.react(r.evtIn.AsChan())
+	go r.react(r.evtIn.Stream().AsChan())
 
 	return
 }

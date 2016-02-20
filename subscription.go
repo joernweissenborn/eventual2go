@@ -13,13 +13,13 @@ type Subscription struct {
 	unsubscribe chan *Subscription
 }
 
-// Creates a new subscription.
+// NewSubscription creates a new subscription.
 func NewSubscription(s *Stream, sr Subscriber) (ss *Subscription) {
 	ss = new(Subscription)
 	ss.sr = sr
 	ss.inC = make(chan Data)
 	ss.doC = make(chan Data)
-	ss.unsubscribe = s.remove_subscription
+	ss.unsubscribe = s.removeSubscription
 	//	ss.CloseOnFuture(s.closed)
 	ss.closed = NewCompleter()
 	go ss.do()
@@ -27,6 +27,7 @@ func NewSubscription(s *Stream, sr Subscriber) (ss *Subscription) {
 	return
 }
 
+// Closed returns a future which gets completed when subscription is closed.
 func (s *Subscription) Closed() *Future {
 	return s.closed.Future()
 }
@@ -76,7 +77,7 @@ func (s *Subscription) do() {
 	}
 }
 
-// Terminates the Subscription.
+// Close terminates the Subscription.
 func (s *Subscription) Close() {
 	s.unsubscribe <- s
 }
@@ -84,7 +85,7 @@ func (s *Subscription) close() {
 	close(s.inC)
 }
 
-// Terminates the Subscription when the Future (error-) completes.
+// CloseOnFuture terminates the Subscription when the given Future (error-)completes.
 func (s *Subscription) CloseOnFuture(f *Future) {
 	f.Then(s.closeOnComplete)
 	f.Err(s.closeOnCompleteError)

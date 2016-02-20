@@ -11,39 +11,37 @@ type Completer struct {
 	f *Future
 }
 
-// Creates a new Completer.
+// NewCompleter creates a new Completer.
 func NewCompleter() (c *Completer) {
-	c = &Completer{NewFuture()}
+	c = &Completer{newFuture()}
 	return
 }
 
-// Creates a new Completer, which error completes after the specified duration, if Completer hasnt been completed otherwise.
+// NewTimeoutCompleter creates a new Completer, which error completes after the specified duration, if Completer hasnt been completed otherwise.
 func NewTimeoutCompleter(d time.Duration) (c *Completer) {
-	c = &Completer{NewFuture()}
+	c = &Completer{newFuture()}
 
 	go timeout(c, d)
 
 	return
 }
 
-// Completes the Completer with the given data and triggers all registered completion handlers. Panics if the Completer is already
-// complete.
+// Complete completes the Completer with the given data and triggers all registered completion handlers. Panics if the Completer is already complete.
 func (c *Completer) Complete(d Data) {
 	c.f.complete(d)
 }
 
-// Returns the associated future.
+// Future returns the associated Future.
 func (c *Completer) Future() (f *Future) {
 	return c.f
 }
 
-// Returns the completion state.
+// Completed returns the completion state.
 func (c *Completer) Completed() bool {
 	return c.f.completed
 }
 
-// Completes the Completer with the given error and triggers all registered error handlers. Panics if the Completer is already
-// complete.
+// CompleteError completes the Completer with the given error and triggers all registered error handlers. Panics if the Completer is already complete.
 func (c *Completer) CompleteError(err error) {
 	c.f.completeError(err)
 }

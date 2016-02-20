@@ -15,6 +15,10 @@ type StringCompleter struct {
 	*eventual2go.Completer
 }
 
+func NewStringCompleter() *StringCompleter {
+	return &StringCompleter{eventual2go.NewCompleter()}
+}
+
 func (c *StringCompleter) Complete(d string) {
 	c.Completer.Complete(d)
 }
@@ -39,6 +43,50 @@ func (f *StringFuture) Then(ch StringCompletionHandler) *StringFuture {
 	return &StringFuture{f.Future.Then(ch.toCompletionHandler())}
 }
 
+func (f *StringFuture) AsChan() chan string {
+	c := make(chan string, 1)
+	cmpl := func(d chan string) StringCompletionHandler {
+		return func(e string) string {
+			d <- e
+			close(d)
+			return e
+		}
+	}
+	ecmpl := func(d chan string) eventual2go.ErrorHandler {
+		return func(error) (eventual2go.Data, error) {
+			close(d)
+			return nil, nil
+		}
+	}
+	f.Then(cmpl(c))
+	f.Err(ecmpl(c))
+	return c
+}
+
+type StringStreamController struct {
+	*eventual2go.StreamController
+}
+
+func NewStringStreamController() *StringStreamController {
+	return &StringStreamController{eventual2go.NewStreamController()}
+}
+
+func (sc *StringStreamController) Add(d string) {
+	sc.StreamController.Add(d)
+}
+
+func (sc *StringStreamController) Join(s *StringStream) {
+	sc.StreamController.Join(s.Stream)
+}
+
+func (sc *StringStreamController) JoinFuture(f *StringFuture) {
+	sc.StreamController.JoinFuture(f.Future)
+}
+
+func (sc *StringStreamController) Stream() *StringStream {
+	return &StringStream{sc.StreamController.Stream()}
+}
+
 type StringStream struct {
 	*eventual2go.Stream
 }
@@ -49,7 +97,7 @@ func (l StringSuscriber) toSuscriber() eventual2go.Subscriber {
 	return func(d eventual2go.Data) { l(d.(string)) }
 }
 
-func (s *StringStream) Listen(ss StringSuscriber) *eventual2go.Subscription{
+func (s *StringStream) Listen(ss StringSuscriber) *eventual2go.Subscription {
 	return s.Stream.Listen(ss.toSuscriber())
 }
 
@@ -59,12 +107,12 @@ func (f StringFilter) toFilter() eventual2go.Filter {
 	return func(d eventual2go.Data) bool { return f(d.(string)) }
 }
 
-func (s *StringStream) Where(f StringFilter) {
-	s.Stream.Where(f.toFilter())
+func (s *StringStream) Where(f StringFilter) *StringStream {
+	return &StringStream{s.Stream.Where(f.toFilter())}
 }
 
-func (s *StringStream) WhereNot(f StringFilter) {
-	s.Stream.WhereNot(f.toFilter())
+func (s *StringStream) WhereNot(f StringFilter) *StringStream {
+	return &StringStream{s.Stream.WhereNot(f.toFilter())}
 }
 
 func (s *StringStream) First() *StringFuture {
@@ -87,7 +135,7 @@ func (s *StringStream) AsChan() (c chan string) {
 
 func pipeToStringChan(c chan string) StringSuscriber {
 	return func(d string) {
-		c<-d
+		c <- d
 	}
 }
 
@@ -97,4 +145,3 @@ func closeStringChan(c chan string) eventual2go.CompletionHandler {
 		return nil
 	}
 }
-

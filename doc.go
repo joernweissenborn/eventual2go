@@ -1,5 +1,4 @@
 /*
-Package eventual2go provides tools for event driven development.It provides an implementation for futures and streams.
-The API inspired by Dartlang.
+Package eventual2go is a library for event driven development. It provides implementations for futures and streams, as can be found in many modern languages.
 */
 package eventual2go

@@ -87,7 +87,7 @@ func TestReactorStream(t *testing.T) {
 	r.React("TestEvent", rt.Handler)
 
 	s := NewStreamController()
-	r.AddStream("TestEvent", s.Stream)
+	r.AddStream("TestEvent", s.Stream())
 	s.Add("HALLO")
 	time.Sleep(1 * time.Millisecond)
 	if !rt.evtFired {

@@ -8,7 +8,7 @@ import (
 func TestStreamBasics(t *testing.T) {
 	sc := NewStreamController()
 	defer sc.Close()
-	c := sc.AsChan()
+	c := sc.Stream().AsChan()
 	sc.Add("test")
 
 	select {
@@ -32,7 +32,7 @@ func TestStreamClose(t *testing.T) {
 func TestStreamCancelSub(t *testing.T) {
 	sc := NewStreamController()
 	a := false
-	ss := sc.Listen(func(d Data) {
+	ss := sc.Stream().Listen(func(d Data) {
 		a = true
 	})
 	ss.Close()
@@ -47,7 +47,7 @@ func TestStreamCancelSub(t *testing.T) {
 
 	b := false
 	c := NewCompleter()
-	sc.Listen(func(Data) { b = true }).CloseOnFuture(c.Future())
+	sc.Stream().Listen(func(Data) { b = true }).CloseOnFuture(c.Future())
 	c.Complete(0)
 	time.Sleep(1 * time.Millisecond)
 
@@ -58,7 +58,7 @@ func TestStreamCancelSub(t *testing.T) {
 		t.Error("subscription didn't cancel")
 	}
 
-	ss = sc.Listen(func(d Data) {
+	ss = sc.Stream().Listen(func(d Data) {
 		a = true
 	})
 	sc.Close()
@@ -72,8 +72,8 @@ func TestStreamCancelSub(t *testing.T) {
 func TestStreamMultiSubscription(t *testing.T) {
 	sc := NewStreamController()
 	defer sc.Close()
-	c1 := sc.AsChan()
-	c2 := sc.AsChan()
+	c1 := sc.Stream().AsChan()
+	c2 := sc.Stream().AsChan()
 	sc.Add("test")
 	select {
 	case <-time.After(1 * time.Millisecond):
@@ -97,7 +97,7 @@ func TestStreamMultiSubscription(t *testing.T) {
 func TestStreamFirst(t *testing.T) {
 	sc := NewStreamController()
 	defer sc.Close()
-	c := sc.AsChan()
+	c := sc.Stream().AsChan()
 
 	sc.Add("test")
 	select {
@@ -113,7 +113,7 @@ func TestStreamFirst(t *testing.T) {
 func TestStreamFilter(t *testing.T) {
 	sc := NewStreamController()
 	defer sc.Close()
-	c := sc.Where(func(d Data) bool { return d.(int) != 2 }).AsChan()
+	c := sc.Stream().Where(func(d Data) bool { return d.(int) != 2 }).AsChan()
 	sc.Add(1)
 	sc.Add(2)
 	sc.Add(2)
@@ -136,7 +136,7 @@ func TestStreamFilter(t *testing.T) {
 func TestStreamSplit(t *testing.T) {
 	sc := NewStreamController()
 	defer sc.Close()
-	y, n := sc.Split(func(d Data) bool { return d.(int) != 2 })
+	y, n := sc.Stream().Split(func(d Data) bool { return d.(int) != 2 })
 	c1 := y.AsChan()
 	c2 := n.AsChan()
 	sc.Add(1)
@@ -169,7 +169,7 @@ func TestStreamSplit(t *testing.T) {
 func TestStreamTransformer(t *testing.T) {
 	sc := NewStreamController()
 	defer sc.Close()
-	c := sc.Transform(func(d Data) Data { return d.(int) * 2 }).AsChan()
+	c := sc.Stream().Transform(func(d Data) Data { return d.(int) * 2 }).AsChan()
 	sc.Add(5)
 	select {
 	case <-time.After(1 * time.Millisecond):

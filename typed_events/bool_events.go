@@ -15,6 +15,10 @@ type BoolCompleter struct {
 	*eventual2go.Completer
 }
 
+func NewBoolCompleter() *BoolCompleter {
+	return &BoolCompleter{eventual2go.NewCompleter()}
+}
+
 func (c *BoolCompleter) Complete(d bool) {
 	c.Completer.Complete(d)
 }
@@ -39,6 +43,50 @@ func (f *BoolFuture) Then(ch BoolCompletionHandler) *BoolFuture {
 	return &BoolFuture{f.Future.Then(ch.toCompletionHandler())}
 }
 
+func (f *BoolFuture) AsChan() chan bool {
+	c := make(chan bool, 1)
+	cmpl := func(d chan bool) BoolCompletionHandler {
+		return func(e bool) bool {
+			d <- e
+			close(d)
+			return e
+		}
+	}
+	ecmpl := func(d chan bool) eventual2go.ErrorHandler {
+		return func(error) (eventual2go.Data, error) {
+			close(d)
+			return nil, nil
+		}
+	}
+	f.Then(cmpl(c))
+	f.Err(ecmpl(c))
+	return c
+}
+
+type BoolStreamController struct {
+	*eventual2go.StreamController
+}
+
+func NewBoolStreamController() *BoolStreamController {
+	return &BoolStreamController{eventual2go.NewStreamController()}
+}
+
+func (sc *BoolStreamController) Add(d bool) {
+	sc.StreamController.Add(d)
+}
+
+func (sc *BoolStreamController) Join(s *BoolStream) {
+	sc.StreamController.Join(s.Stream)
+}
+
+func (sc *BoolStreamController) JoinFuture(f *BoolFuture) {
+	sc.StreamController.JoinFuture(f.Future)
+}
+
+func (sc *BoolStreamController) Stream() *BoolStream {
+	return &BoolStream{sc.StreamController.Stream()}
+}
+
 type BoolStream struct {
 	*eventual2go.Stream
 }
@@ -49,7 +97,7 @@ func (l BoolSuscriber) toSuscriber() eventual2go.Subscriber {
 	return func(d eventual2go.Data) { l(d.(bool)) }
 }
 
-func (s *BoolStream) Listen(ss BoolSuscriber) *eventual2go.Subscription{
+func (s *BoolStream) Listen(ss BoolSuscriber) *eventual2go.Subscription {
 	return s.Stream.Listen(ss.toSuscriber())
 }
 
@@ -59,12 +107,12 @@ func (f BoolFilter) toFilter() eventual2go.Filter {
 	return func(d eventual2go.Data) bool { return f(d.(bool)) }
 }
 
-func (s *BoolStream) Where(f BoolFilter) {
-	s.Stream.Where(f.toFilter())
+func (s *BoolStream) Where(f BoolFilter) *BoolStream {
+	return &BoolStream{s.Stream.Where(f.toFilter())}
 }
 
-func (s *BoolStream) WhereNot(f BoolFilter) {
-	s.Stream.WhereNot(f.toFilter())
+func (s *BoolStream) WhereNot(f BoolFilter) *BoolStream {
+	return &BoolStream{s.Stream.WhereNot(f.toFilter())}
 }
 
 func (s *BoolStream) First() *BoolFuture {
@@ -87,7 +135,7 @@ func (s *BoolStream) AsChan() (c chan bool) {
 
 func pipeToBoolChan(c chan bool) BoolSuscriber {
 	return func(d bool) {
-		c<-d
+		c <- d
 	}
 }
 
@@ -97,4 +145,3 @@ func closeBoolChan(c chan bool) eventual2go.CompletionHandler {
 		return nil
 	}
 }
-

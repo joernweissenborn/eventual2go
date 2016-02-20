@@ -182,6 +182,10 @@ type {{.Name}}Completer struct {
 	*eventual2go.Completer
 }
 
+func New{{.Name}}Completer() *{{.Name}}Completer {
+	return &{{.Name}}Completer{eventual2go.NewCompleter()}
+}
+
 func (c *{{.Name}}Completer) Complete(d {{.TypeName}}) {
 	c.Completer.Complete(d)
 }
@@ -206,6 +210,50 @@ func (f *{{.Name}}Future) Then(ch {{.Name}}CompletionHandler) *{{.Name}}Future {
 	return &{{.Name}}Future{f.Future.Then(ch.toCompletionHandler())}
 }
 
+func (f *{{.Name}}Future) AsChan() chan {{.TypeName}} {
+	c := make(chan {{.TypeName}}, 1)
+	cmpl := func(d chan {{.TypeName}}) {{.Name}}CompletionHandler {
+		return func(e {{.TypeName}}) {{.TypeName}} {
+			d <- e
+			close(d)
+			return e
+		}
+	}
+	ecmpl := func(d chan {{.TypeName}}) eventual2go.ErrorHandler {
+		return func(error) (eventual2go.Data, error) {
+			close(d)
+			return nil, nil
+		}
+	}
+	f.Then(cmpl(c))
+	f.Err(ecmpl(c))
+	return c
+}
+
+type {{.Name}}StreamController struct {
+	*eventual2go.StreamController
+}
+
+func New{{.Name}}StreamController() *{{.Name}}StreamController {
+	return &{{.Name}}StreamController{eventual2go.NewStreamController()}
+}
+
+func (sc *{{.Name}}StreamController) Add(d {{.TypeName}}) {
+	sc.StreamController.Add(d)
+}
+
+func (sc *{{.Name}}StreamController) Join(s *{{.Name}}Stream) {
+	sc.StreamController.Join(s.Stream)
+}
+
+func (sc *{{.Name}}StreamController) JoinFuture(f *{{.Name}}Future) {
+	sc.StreamController.JoinFuture(f.Future)
+}
+
+func (sc *{{.Name}}StreamController) Stream() *{{.Name}}Stream {
+	return &{{.Name}}Stream{sc.StreamController.Stream()}
+}
+
 type {{.Name}}Stream struct {
 	*eventual2go.Stream
 }
@@ -216,7 +264,7 @@ func (l {{.Name}}Suscriber) toSuscriber() eventual2go.Subscriber {
 	return func(d eventual2go.Data) { l(d.({{.TypeName}})) }
 }
 
-func (s *{{.Name}}Stream) Listen(ss {{.Name}}Suscriber) *eventual2go.Subscription{
+func (s *{{.Name}}Stream) Listen(ss {{.Name}}Suscriber) *eventual2go.Subscription {
 	return s.Stream.Listen(ss.toSuscriber())
 }
 
@@ -226,12 +274,12 @@ func (f {{.Name}}Filter) toFilter() eventual2go.Filter {
 	return func(d eventual2go.Data) bool { return f(d.({{.TypeName}})) }
 }
 
-func (s *{{.Name}}Stream) Where(f {{.Name}}Filter) {
-	s.Stream.Where(f.toFilter())
+func (s *{{.Name}}Stream) Where(f {{.Name}}Filter) *{{.Name}}Stream {
+	return &{{.Name}}Stream{s.Stream.Where(f.toFilter())}
 }
 
-func (s *{{.Name}}Stream) WhereNot(f {{.Name}}Filter) {
-	s.Stream.WhereNot(f.toFilter())
+func (s *{{.Name}}Stream) WhereNot(f {{.Name}}Filter) *{{.Name}}Stream {
+	return &{{.Name}}Stream{s.Stream.WhereNot(f.toFilter())}
 }
 
 func (s *{{.Name}}Stream) First() *{{.Name}}Future {
@@ -254,7 +302,7 @@ func (s *{{.Name}}Stream) AsChan() (c chan {{.TypeName}}) {
 
 func pipeTo{{.Name}}Chan(c chan {{.TypeName}}) {{.Name}}Suscriber {
 	return func(d {{.TypeName}}) {
-		c<-d
+		c <- d
 	}
 }
 
@@ -264,5 +312,4 @@ func close{{.Name}}Chan(c chan {{.TypeName}}) eventual2go.CompletionHandler {
 		return nil
 	}
 }
-
 `

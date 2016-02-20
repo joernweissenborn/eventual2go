@@ -1,4 +1,4 @@
 package eventual2go
 
-//A general Datatype.
+//Data represents generic datatype.
 type Data interface{}

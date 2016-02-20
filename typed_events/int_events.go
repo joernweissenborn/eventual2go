@@ -15,6 +15,10 @@ type IntCompleter struct {
 	*eventual2go.Completer
 }
 
+func NewIntCompleter() *IntCompleter {
+	return &IntCompleter{eventual2go.NewCompleter()}
+}
+
 func (c *IntCompleter) Complete(d int) {
 	c.Completer.Complete(d)
 }
@@ -39,6 +43,50 @@ func (f *IntFuture) Then(ch IntCompletionHandler) *IntFuture {
 	return &IntFuture{f.Future.Then(ch.toCompletionHandler())}
 }
 
+func (f *IntFuture) AsChan() chan int {
+	c := make(chan int, 1)
+	cmpl := func(d chan int) IntCompletionHandler {
+		return func(e int) int {
+			d <- e
+			close(d)
+			return e
+		}
+	}
+	ecmpl := func(d chan int) eventual2go.ErrorHandler {
+		return func(error) (eventual2go.Data, error) {
+			close(d)
+			return nil, nil
+		}
+	}
+	f.Then(cmpl(c))
+	f.Err(ecmpl(c))
+	return c
+}
+
+type IntStreamController struct {
+	*eventual2go.StreamController
+}
+
+func NewIntStreamController() *IntStreamController {
+	return &IntStreamController{eventual2go.NewStreamController()}
+}
+
+func (sc *IntStreamController) Add(d int) {
+	sc.StreamController.Add(d)
+}
+
+func (sc *IntStreamController) Join(s *IntStream) {
+	sc.StreamController.Join(s.Stream)
+}
+
+func (sc *IntStreamController) JoinFuture(f *IntFuture) {
+	sc.StreamController.JoinFuture(f.Future)
+}
+
+func (sc *IntStreamController) Stream() *IntStream {
+	return &IntStream{sc.StreamController.Stream()}
+}
+
 type IntStream struct {
 	*eventual2go.Stream
 }
@@ -49,7 +97,7 @@ func (l IntSuscriber) toSuscriber() eventual2go.Subscriber {
 	return func(d eventual2go.Data) { l(d.(int)) }
 }
 
-func (s *IntStream) Listen(ss IntSuscriber) *eventual2go.Subscription{
+func (s *IntStream) Listen(ss IntSuscriber) *eventual2go.Subscription {
 	return s.Stream.Listen(ss.toSuscriber())
 }
 
@@ -59,12 +107,12 @@ func (f IntFilter) toFilter() eventual2go.Filter {
 	return func(d eventual2go.Data) bool { return f(d.(int)) }
 }
 
-func (s *IntStream) Where(f IntFilter) {
-	s.Stream.Where(f.toFilter())
+func (s *IntStream) Where(f IntFilter) *IntStream {
+	return &IntStream{s.Stream.Where(f.toFilter())}
 }
 
-func (s *IntStream) WhereNot(f IntFilter) {
-	s.Stream.WhereNot(f.toFilter())
+func (s *IntStream) WhereNot(f IntFilter) *IntStream {
+	return &IntStream{s.Stream.WhereNot(f.toFilter())}
 }
 
 func (s *IntStream) First() *IntFuture {
@@ -87,7 +135,7 @@ func (s *IntStream) AsChan() (c chan int) {
 
 func pipeToIntChan(c chan int) IntSuscriber {
 	return func(d int) {
-		c<-d
+		c <- d
 	}
 }
 
@@ -97,4 +145,3 @@ func closeIntChan(c chan int) eventual2go.CompletionHandler {
 		return nil
 	}
 }
-

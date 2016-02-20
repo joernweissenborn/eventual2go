@@ -6,7 +6,7 @@ import (
 )
 
 // Creates a new future.
-func NewFuture() (F *Future) {
+func newFuture() (F *Future) {
 	F = &Future{
 		new(sync.Mutex),
 		[]futurecompleter{},
@@ -44,7 +44,7 @@ func (f *Future) complete(d Data) {
 	f.completed = true
 }
 
-// Returns the completion state.
+// Completed returns the completion state.
 func (f *Future) Completed() bool {
 	return f.completed
 }
@@ -85,7 +85,7 @@ func (f *Future) Then(ch CompletionHandler) (nf *Future) {
 	f.m.Lock()
 	defer f.m.Unlock()
 
-	nf = NewFuture()
+	nf = newFuture()
 	fc := futurecompleter{ch, nf}
 	if f.completed && f.e == nil {
 		deliverData(fc, f.r)
@@ -95,17 +95,17 @@ func (f *Future) Then(ch CompletionHandler) (nf *Future) {
 	return
 }
 
-// Blocks until the future is complete.
+// WaitUntilComplete blocks until the future is complete.
 func (f *Future) WaitUntilComplete() {
 	<-f.AsChan()
 }
 
-// Returns the result of the future, nil called before completion or after error completion.
+// GetResult returns the result of the future, nil called before completion or after error completion.
 func (f *Future) GetResult() Data {
 	return f.r
 }
 
-// Then registers an error handler. If the future is already completed with an error, the handler gets executed
+// Err registers an error handler. If the future is already completed with an error, the handler gets executed
 // immediately.
 // Returns a future that either gets completed with result of the handler or error completed with the error from handler,
 // if not nil.
@@ -113,7 +113,7 @@ func (f *Future) Err(eh ErrorHandler) (nf *Future) {
 	f.m.Lock()
 	defer f.m.Unlock()
 
-	nf = NewFuture()
+	nf = newFuture()
 	fce := futurecompletererror{eh, nf}
 	if f.e != nil {
 		deliverErr(fce, f.e)
