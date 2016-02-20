@@ -129,12 +129,17 @@ func run(c *cli.Context) {
 			}
 			outputFile = fmt.Sprintf("%s_events.go", name)
 		}
+		outputFile = strings.ToLower(outputFile)
 		path, err := filepath.Abs(outputFile)
 		if err != nil {
 			logger.Fatalf("error creating file", err)
 		}
 
 		err = ioutil.WriteFile(path, out.Bytes(), os.ModePerm)
+		if err != nil {
+			logger.Fatalf("error creating file", err)
+		}
+
 	}
 
 }
