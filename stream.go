@@ -85,6 +85,21 @@ func (s *Stream) Closed() *Future {
 	return s.closed.Future()
 }
 
+// CloseOnFuture Closes the stream when the given Future (error-)completes.
+func (s *Stream) CloseOnFuture(f *Future) {
+	f.Then(s.closeOnComplete)
+	f.Err(s.closeOnCompleteError)
+}
+
+func (s *Stream) closeOnComplete(Data) Data {
+	s.Close()
+	return nil
+}
+func (s *Stream) closeOnCompleteError(error) (Data, error) {
+	s.Close()
+	return nil, nil
+}
+
 // Listen registers a subscriber. Returns Subscription, which can be used to terminate the subcription.
 func (s *Stream) Listen(sr Subscriber) (ss *Subscription) {
 	ss = NewSubscription(s, sr)

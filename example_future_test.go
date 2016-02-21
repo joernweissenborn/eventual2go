@@ -1,4 +1,4 @@
-package eventual2go
+package eventual2go_test
 
 import (
 	"errors"
