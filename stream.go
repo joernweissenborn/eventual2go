@@ -52,7 +52,6 @@ func (s *Stream) unsubscribe(rss *Subscription) {
 	}
 	if index != -1 {
 		l := len(s.subscriptions)
-		s.subscriptions[index].close()
 		switch l {
 		case 1:
 			s.subscriptions = []*Subscription{}
@@ -103,10 +102,18 @@ func (s *Stream) closeOnCompleteError(error) (Data, error) {
 // Listen registers a subscriber. Returns Subscription, which can be used to terminate the subcription.
 func (s *Stream) Listen(sr Subscriber) (ss *Subscription) {
 	ss = NewSubscription(s, sr)
+	ss.Closed().Then(s.cancelSubscription)
 	s.addSubscription <- ss
 	return
 }
+func (s *Stream) cancelSubscription(d Data) Data {
+	if !s.closed.Completed() {
+		ss := d.(*Subscription)
+		s.removeSubscription <- ss
 
+	}
+	return nil
+}
 func (s *Stream) removeSubscrip(ss *Subscription) CompletionHandler {
 	return func(Data) Data {
 		if !s.closed.Completed() {
@@ -245,7 +252,7 @@ func (s *Stream) run() {
 			close(s.removeSubscription)
 			close(s.dataIn)
 			for _, ss := range s.subscriptions {
-				ss.close()
+				ss.Close()
 			}
 			return
 		}

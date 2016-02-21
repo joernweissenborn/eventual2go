@@ -97,7 +97,7 @@ func TestStreamMultiSubscription(t *testing.T) {
 func TestStreamFirst(t *testing.T) {
 	sc := NewStreamController()
 	defer sc.Close()
-	c := sc.Stream().AsChan()
+	c := sc.Stream().First().AsChan()
 
 	sc.Add("test")
 	select {
@@ -166,6 +166,7 @@ func TestStreamSplit(t *testing.T) {
 		}
 	}
 }
+
 func TestStreamTransformer(t *testing.T) {
 	sc := NewStreamController()
 	defer sc.Close()
@@ -177,6 +178,24 @@ func TestStreamTransformer(t *testing.T) {
 	case data := <-c:
 		if data.(int) != 10 {
 			t.Error("got 5")
+		}
+	}
+}
+
+func TestJoinFuture(t *testing.T) {
+
+	sc := NewStreamController()
+	defer sc.Close()
+	c := sc.Stream().AsChan()
+	fc := NewCompleter()
+	sc.JoinFuture(fc.Future())
+	fc.Complete("test")
+	select {
+	case <-time.After(1 * time.Second):
+		t.Error("no response")
+	case data := <-c:
+		if data.(string) != "test" {
+			t.Error("got wrong data")
 		}
 	}
 }
