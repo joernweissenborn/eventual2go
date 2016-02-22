@@ -2,19 +2,20 @@ package eventual2go
 
 import (
 	"errors"
+	"sync"
 	"testing"
 	"time"
 )
 
 func TestReactorBasic(t *testing.T) {
 	r := NewReactor()
-	rt := new(reactorTester)
+	rt := &reactorTester{Mutex: &sync.Mutex{}}
 	r.React("TestEvent", rt.Handler)
 
 	r.Fire("TestEvent", "HALLO")
 	time.Sleep(1 * time.Millisecond)
 
-	if !rt.evtFired {
+	if !rt.hasFired() {
 		t.Fatal("Event didnt fire")
 	}
 	if rt.data.(string) != "HALLO" {
@@ -24,15 +25,15 @@ func TestReactorBasic(t *testing.T) {
 
 func TestReactorMultipleEvents(t *testing.T) {
 	r := NewReactor()
-	rt1 := new(reactorTester)
-	rt2 := new(reactorTester)
+	rt1 := &reactorTester{Mutex: &sync.Mutex{}}
+	rt2 := &reactorTester{Mutex: &sync.Mutex{}}
 	r.React("TestEvent1", rt1.Handler)
 	r.React("TestEvent2", rt2.Handler)
 	r.Fire("TestEvent2", "HALLO")
 	r.Fire("TestEvent1", "HALLO")
 	time.Sleep(1 * time.Millisecond)
 
-	if !rt1.evtFired {
+	if !rt1.hasFired() {
 		t.Fatal("Event didnt fire")
 	}
 	if rt1.data.(string) != "HALLO" {
@@ -49,7 +50,8 @@ func TestReactorMultipleEvents(t *testing.T) {
 
 func TestReactorFuture(t *testing.T) {
 	r := NewReactor()
-	rt := new(reactorTester)
+	rt := &reactorTester{Mutex: &sync.Mutex{}}
+
 	r.React("TestEvent", rt.Handler)
 
 	c := NewCompleter()
@@ -57,7 +59,7 @@ func TestReactorFuture(t *testing.T) {
 	r.AddFuture("TestEvent", f)
 	c.Complete("HALLO")
 	time.Sleep(1 * time.Millisecond)
-	if !rt.evtFired {
+	if !rt.hasFired() {
 		t.Fatal("Event didnt fire")
 	}
 	if rt.data.(string) != "HALLO" {
@@ -66,7 +68,8 @@ func TestReactorFuture(t *testing.T) {
 }
 func TestReactorFutureError(t *testing.T) {
 	r := NewReactor()
-	rt := new(reactorTester)
+	rt := &reactorTester{Mutex: &sync.Mutex{}}
+
 	r.React("TestEvent", rt.Handler)
 
 	c := NewCompleter()
@@ -74,7 +77,7 @@ func TestReactorFutureError(t *testing.T) {
 	r.AddFutureError("TestEvent", f)
 	c.CompleteError(errors.New("HALLO"))
 	time.Sleep(1 * time.Millisecond)
-	if !rt.evtFired {
+	if !rt.hasFired() {
 		t.Fatal("Event didnt fire")
 	}
 	if rt.data.(error).Error() != "HALLO" {
@@ -83,14 +86,14 @@ func TestReactorFutureError(t *testing.T) {
 }
 func TestReactorStream(t *testing.T) {
 	r := NewReactor()
-	rt := new(reactorTester)
+	rt := &reactorTester{Mutex: &sync.Mutex{}}
 	r.React("TestEvent", rt.Handler)
 
 	s := NewStreamController()
 	r.AddStream("TestEvent", s.Stream())
 	s.Add("HALLO")
 	time.Sleep(1 * time.Millisecond)
-	if !rt.evtFired {
+	if !rt.hasFired() {
 		t.Fatal("Event didnt fire")
 	}
 	if rt.data.(string) != "HALLO" {
@@ -99,11 +102,20 @@ func TestReactorStream(t *testing.T) {
 }
 
 type reactorTester struct {
+	*sync.Mutex
 	evtFired bool
 	data     Data
 }
 
 func (rt *reactorTester) Handler(d Data) {
+	rt.Lock()
+	defer rt.Unlock()
 	rt.evtFired = true
 	rt.data = d
+}
+
+func (rt *reactorTester) hasFired() bool {
+	rt.Lock()
+	defer rt.Unlock()
+	return rt.evtFired
 }

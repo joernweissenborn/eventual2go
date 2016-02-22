@@ -5,19 +5,6 @@ import (
 	"sync"
 )
 
-// Creates a new future.
-func newFuture() (F *Future) {
-	F = &Future{
-		new(sync.Mutex),
-		[]futurecompleter{},
-		[]futurecompletererror{},
-		false,
-		nil,
-		nil,
-	}
-	return
-}
-
 // Future is thread-safe struct that can be completed with arbitrary data or failed with an error. Handler functions can
 // be registered for both events and get invoked after completion..
 type Future struct {
@@ -25,8 +12,19 @@ type Future struct {
 	fcs       []futurecompleter
 	fces      []futurecompletererror
 	completed bool
-	r         interface{}
-	e         error
+	result    Data
+	err       error
+}
+
+// Creates a new future.
+func newFuture() (F *Future) {
+	F = &Future{
+		m:         new(sync.Mutex),
+		fcs:       []futurecompleter{},
+		fces:      []futurecompletererror{},
+		completed: false,
+	}
+	return
 }
 
 // Completes the future with the given data and triggers al registered completion handlers. Panics if the future is already
@@ -37,7 +35,7 @@ func (f *Future) complete(d Data) {
 	if f.completed {
 		panic(fmt.Sprint("Completed complete future with", d))
 	}
-	f.r = d
+	f.result = d
 	for _, fc := range f.fcs {
 		go deliverData(fc, d)
 	}
@@ -46,6 +44,8 @@ func (f *Future) complete(d Data) {
 
 // Completed returns the completion state.
 func (f *Future) Completed() bool {
+	f.m.Lock()
+	defer f.m.Unlock()
 	return f.completed
 }
 
@@ -57,9 +57,9 @@ func (f *Future) completeError(err error) {
 	if f.completed {
 		panic(fmt.Sprint("Errorcompleted complete future with", err))
 	}
-	f.e = err
+	f.err = err
 	for _, fce := range f.fces {
-		deliverErr(fce, f.e)
+		deliverErr(fce, f.err)
 	}
 	f.completed = true
 }
@@ -87,8 +87,8 @@ func (f *Future) Then(ch CompletionHandler) (nf *Future) {
 
 	nf = newFuture()
 	fc := futurecompleter{ch, nf}
-	if f.completed && f.e == nil {
-		deliverData(fc, f.r)
+	if f.completed && f.err == nil {
+		deliverData(fc, f.result)
 	} else if !f.completed {
 		f.fcs = append(f.fcs, fc)
 	}
@@ -102,7 +102,7 @@ func (f *Future) WaitUntilComplete() {
 
 // GetResult returns the result of the future, nil called before completion or after error completion.
 func (f *Future) GetResult() Data {
-	return f.r
+	return f.result
 }
 
 // Err registers an error handler. If the future is already completed with an error, the handler gets executed
@@ -115,8 +115,8 @@ func (f *Future) Err(eh ErrorHandler) (nf *Future) {
 
 	nf = newFuture()
 	fce := futurecompletererror{eh, nf}
-	if f.e != nil {
-		deliverErr(fce, f.e)
+	if f.err != nil {
+		deliverErr(fce, f.err)
 	} else if !f.completed {
 		f.fces = append(f.fces, fce)
 	}

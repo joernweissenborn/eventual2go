@@ -1,81 +1,52 @@
 package eventual2go
 
-import (
-	"reflect"
-)
+import "sync"
 
 // A Stream can be consumed or new streams be derived by registering handler functions.
 type Stream struct {
-	addSubscription    chan *Subscription
-	removeSubscription chan *Subscription
-	dataIn             chan Data
-
-	subscriptions []*Subscription
+	m             *sync.Mutex
+	subscriptions map[*Subscription]interface{}
 	closed        *Completer
-
-	stop chan struct{}
 }
 
 // NewStream returns a new stream. Data can not be added to a Stream manually, use a StreamController instead.
 func NewStream() (s *Stream) {
 	s = &Stream{
-		make(chan *Subscription),
-		make(chan *Subscription),
-		make(chan Data),
-		[]*Subscription{},
-		NewCompleter(),
-		make(chan struct{}),
+		m:             &sync.Mutex{},
+		subscriptions: map[*Subscription]interface{}{},
+		closed:        NewCompleter(),
 	}
-	go s.run()
-
 	return
 }
 
-func (s *Stream) addData(d Data) {
-	for _, ss := range s.subscriptions {
+func (s *Stream) add(d Data) {
+	s.m.Lock()
+	defer s.m.Unlock()
+	for ss := range s.subscriptions {
 		ss.add(d)
 	}
 }
 
 func (s *Stream) subscribe(ss *Subscription) {
-	s.subscriptions = append(s.subscriptions, ss)
+	s.m.Lock()
+	defer s.m.Unlock()
+	s.subscriptions[ss] = nil
 }
 
-func (s *Stream) unsubscribe(rss *Subscription) {
-	index := -1
-	rssp := reflect.ValueOf(rss).Pointer()
-	for i, ss := range s.subscriptions {
-		if reflect.ValueOf(ss).Pointer() == rssp {
-			index = i
-			break
-		}
-	}
-	if index != -1 {
-		l := len(s.subscriptions)
-		switch l {
-		case 1:
-			s.subscriptions = []*Subscription{}
-		case 2:
-			if index == 0 {
-				s.subscriptions[0] = s.subscriptions[1]
-			}
-			s.subscriptions = s.subscriptions[:1]
-		default:
-			s.subscriptions[index] = s.subscriptions[l-1]
-			s.subscriptions = s.subscriptions[:l-1]
+func (s *Stream) unsubscribe(ss *Subscription) {
+	s.m.Lock()
+	defer s.m.Unlock()
+	delete(s.subscriptions, ss)
 
-		}
-
-	}
-}
-
-func (s *Stream) close() {
-	s.stop <- struct{}{}
 }
 
 // Close closes a Stream and cancels all subscriptions.
 func (s *Stream) Close() {
-	s.close()
+	s.m.Lock()
+	defer s.m.Unlock()
+	for ss := range s.subscriptions {
+		ss.Close()
+	}
 	s.closed.Complete(nil)
 }
 
@@ -102,25 +73,17 @@ func (s *Stream) closeOnCompleteError(error) (Data, error) {
 // Listen registers a subscriber. Returns Subscription, which can be used to terminate the subcription.
 func (s *Stream) Listen(sr Subscriber) (ss *Subscription) {
 	ss = NewSubscription(s, sr)
+	s.subscribe(ss)
 	ss.Closed().Then(s.cancelSubscription)
-	s.addSubscription <- ss
 	return
 }
 func (s *Stream) cancelSubscription(d Data) Data {
 	if !s.closed.Completed() {
 		ss := d.(*Subscription)
-		s.removeSubscription <- ss
+		s.unsubscribe(ss)
 
 	}
 	return nil
-}
-func (s *Stream) removeSubscrip(ss *Subscription) CompletionHandler {
-	return func(Data) Data {
-		if !s.closed.Completed() {
-			s.removeSubscription <- ss
-		}
-		return nil
-	}
 }
 
 // Transform registers a Transformer function and returns the transformed stream.
@@ -215,48 +178,4 @@ func closeChan(c chan Data) CompletionHandler {
 		close(c)
 		return nil
 	}
-}
-
-func (s *Stream) add(d Data) {
-	s.dataIn <- d
-	return
-}
-
-func (s *Stream) run() {
-	for {
-
-		select {
-
-		case ss, ok := <-s.addSubscription:
-			if !ok {
-				return
-			}
-			s.subscribe(ss)
-
-		case ss, ok := <-s.removeSubscription:
-			if !ok {
-				return
-			}
-			s.unsubscribe(ss)
-
-		case d, ok := <-s.dataIn:
-			if !ok {
-				return
-			}
-			for _, ss := range s.subscriptions {
-				ss.add(d)
-			}
-
-		case <-s.stop:
-			close(s.addSubscription)
-			close(s.removeSubscription)
-			close(s.dataIn)
-			for _, ss := range s.subscriptions {
-				ss.Close()
-			}
-			return
-		}
-
-	}
-
 }

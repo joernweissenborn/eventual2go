@@ -38,7 +38,7 @@ func (c *Completer) Future() (f *Future) {
 
 // Completed returns the completion state.
 func (c *Completer) Completed() bool {
-	return c.f.completed
+	return c.f.Completed()
 }
 
 // CompleteError completes the Completer with the given error and triggers all registered error handlers. Panics if the Completer is already complete.

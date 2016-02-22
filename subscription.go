@@ -5,27 +5,21 @@ import "sync"
 // Subscription invokes a Subscriber when data is added to the consumed stream. It is also used for terminating a
 // Subscription.
 type Subscription struct {
-	sr Subscriber
-
-	inC chan Data
-	doC chan Data
-
-	m *sync.Mutex
-
 	closed *Completer
-
-	unsubscribe chan *Subscription
+	sr     Subscriber
+	inC    chan Data
+	doC    chan Data
+	m      *sync.Mutex
 }
 
 // NewSubscription creates a new subscription.
 func NewSubscription(s *Stream, sr Subscriber) (ss *Subscription) {
 	ss = &Subscription{
-		sr:          sr,
-		inC:         make(chan Data),
-		doC:         make(chan Data),
-		m:           &sync.Mutex{},
-		unsubscribe: s.removeSubscription,
-		closed:      NewCompleter(),
+		sr:     sr,
+		inC:    make(chan Data),
+		doC:    make(chan Data),
+		m:      &sync.Mutex{},
+		closed: NewCompleter(),
 	}
 	go ss.do()
 	go ss.in()
