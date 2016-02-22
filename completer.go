@@ -5,6 +5,9 @@ import (
 	"time"
 )
 
+// ErrTimeout represents a timeout error
+var ErrTimeout = errors.New("Timeout")
+
 // Completer is thread-safe struct that can be completed with arbitrary data or failed with an error. Handler functions can
 // be registered for both events and get invoked after completion..
 type Completer struct {
@@ -49,6 +52,6 @@ func (c *Completer) CompleteError(err error) {
 func timeout(c *Completer, d time.Duration) {
 	time.Sleep(d)
 	if !c.Completed() {
-		c.CompleteError(errors.New("Timeout"))
+		c.CompleteError(ErrTimeout)
 	}
 }

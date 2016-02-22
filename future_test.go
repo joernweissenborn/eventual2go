@@ -3,6 +3,7 @@ package eventual2go
 import (
 	"errors"
 	"testing"
+	"time"
 )
 
 func TestFutureBasicCompletion(t *testing.T) {
@@ -24,6 +25,22 @@ func TestFutureBasicCompletion(t *testing.T) {
 
 	if !(<-c).(bool) {
 		t.Error("Completed with wrong args")
+	}
+}
+
+func TestTimeoutCompletion(t *testing.T) {
+	cp := NewTimeoutCompleter(1 * time.Microsecond)
+	f := cp.Future()
+	time.Sleep(2 * time.Microsecond)
+	if !f.Completed() {
+		t.Error("Timeout didnt complete")
+	}
+	c := make(chan error)
+	defer close(c)
+	f.Err(testcompletererr(c))
+
+	if <-c != ErrTimeout {
+		t.Error("Completed with wrong error")
 	}
 }
 
