@@ -31,6 +31,7 @@ func (s *Stream) subscribe(ss *Subscription) {
 	s.m.Lock()
 	defer s.m.Unlock()
 	s.subscriptions[ss] = nil
+	ss.canceled.Future().Then(s.cancelSubscription)
 }
 
 func (s *Stream) unsubscribe(ss *Subscription) {
@@ -74,7 +75,6 @@ func (s *Stream) closeOnCompleteError(error) (Data, error) {
 func (s *Stream) Listen(sr Subscriber) (ss *Subscription) {
 	ss = NewSubscription(s, sr)
 	s.subscribe(ss)
-	ss.Closed().Then(s.cancelSubscription)
 	return
 }
 func (s *Stream) cancelSubscription(d Data) Data {

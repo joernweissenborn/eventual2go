@@ -5,21 +5,23 @@ import "sync"
 // Subscription invokes a Subscriber when data is added to the consumed stream. It is also used for terminating a
 // Subscription.
 type Subscription struct {
-	closed *Completer
-	sr     Subscriber
-	inC    chan Data
-	doC    chan Data
-	m      *sync.Mutex
+	canceled *Completer
+	closed   *Completer
+	sr       Subscriber
+	inC      chan Data
+	doC      chan Data
+	m        *sync.Mutex
 }
 
 // NewSubscription creates a new subscription.
 func NewSubscription(s *Stream, sr Subscriber) (ss *Subscription) {
 	ss = &Subscription{
-		sr:     sr,
-		inC:    make(chan Data),
-		doC:    make(chan Data),
-		m:      &sync.Mutex{},
-		closed: NewCompleter(),
+		canceled: NewCompleter(),
+		closed:   NewCompleter(),
+		sr:       sr,
+		inC:      make(chan Data),
+		doC:      make(chan Data),
+		m:        &sync.Mutex{},
 	}
 	go ss.do()
 	go ss.in()
@@ -34,7 +36,7 @@ func (s *Subscription) Closed() *Future {
 func (s *Subscription) add(d Data) {
 	s.m.Lock()
 	defer s.m.Unlock()
-	if s.closed.Completed() {
+	if s.canceled.Completed() {
 		return
 	}
 	s.inC <- d
@@ -50,14 +52,14 @@ func (s *Subscription) in() {
 			if ok && !stop {
 				pile = append(pile, d)
 			} else {
-				s.Close()
+				close(s.doC)
 				return
 			}
 		} else {
 			select {
 			case s.doC <- pile[0]:
 				if len(pile) == 1 && stop {
-					s.Close()
+					close(s.doC)
 					return
 				}
 				pile = pile[1:]
@@ -77,21 +79,18 @@ func (s *Subscription) do() {
 	for d := range s.doC {
 		s.sr(d)
 	}
+	s.closed.Complete(s)
 }
 
 // Close terminates the Subscription.
 func (s *Subscription) Close() {
 	s.m.Lock()
 	defer s.m.Unlock()
-	if s.closed.Completed() {
+	if s.canceled.Completed() {
 		return
 	}
-	s.close()
-	s.closed.Complete(s)
-}
-func (s *Subscription) close() {
+	s.canceled.Complete(s)
 	close(s.inC)
-	close(s.doC)
 }
 
 // CloseOnFuture terminates the Subscription when the given Future (error-)completes.
