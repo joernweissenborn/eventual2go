@@ -10,20 +10,20 @@ import (
 type Reactor struct {
 	m *sync.Mutex
 
-	evtIn *StreamController
+	evtIn *EventStreamController
 
 	shutdown *Completer
 
-	eventRegister map[string]Subscriber
+	eventRegister map[string]Subscriber //TODO: the suscriptions itself can be used
 }
 
 func NewReactor() (r *Reactor) {
 
 	r = &Reactor{
-		new(sync.Mutex),
-		NewStreamController(),
-		NewCompleter(),
-		map[string]Subscriber{},
+		m:             new(sync.Mutex),
+		evtIn:         NewEventStreamController(),
+		shutdown:      NewCompleter(),
+		eventRegister: map[string]Subscriber{},
 	}
 
 	go r.react(r.evtIn.Stream().AsChan())
@@ -32,6 +32,7 @@ func NewReactor() (r *Reactor) {
 }
 
 func (r *Reactor) Shutdown() {
+	//TODO: shut be a special event
 	r.shutdown.Complete(nil)
 	r.evtIn.Close()
 }
@@ -107,10 +108,9 @@ func (r *Reactor) createEventFromFutureError(name string) ErrorHandler {
 	}
 }
 
-func (r *Reactor) react(c chan Data) {
+func (r *Reactor) react(ec chan Event) {
 
-	for d := range c {
-		evt := d.(Event)
+	for evt := range ec {
 		r.m.Lock()
 		if h, f := r.eventRegister[evt.Name]; f {
 			h(evt.Data)
