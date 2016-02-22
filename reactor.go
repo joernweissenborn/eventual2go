@@ -7,34 +7,47 @@ import (
 	"time"
 )
 
+const (
+	Shutdown = "shutdown"
+)
+
 type Reactor struct {
-	m *sync.Mutex
-
-	evtIn *EventStreamController
-
-	shutdown *Completer
-
-	eventRegister map[string]Subscriber //TODO: the suscriptions itself can be used
+	m                 *sync.Mutex
+	evtIn             *EventStreamController
+	shutdownCompleter *Completer
+	eventRegister     map[string]Subscriber
 }
 
 func NewReactor() (r *Reactor) {
 
 	r = &Reactor{
-		m:             new(sync.Mutex),
-		evtIn:         NewEventStreamController(),
-		shutdown:      NewCompleter(),
-		eventRegister: map[string]Subscriber{},
+		m:                 new(sync.Mutex),
+		evtIn:             NewEventStreamController(),
+		shutdownCompleter: NewCompleter(),
+		eventRegister:     map[string]Subscriber{},
 	}
+
+	r.evtIn.Stream().FirstWhere(func(e Event) bool {
+		return e.Name == Shutdown
+	}).Then(r.shutdown)
 
 	go r.react(r.evtIn.Stream().AsChan())
 
 	return
 }
 
-func (r *Reactor) Shutdown() {
-	//TODO: shut be a special event
-	r.shutdown.Complete(nil)
+func (r *Reactor) OnShutdown(s Subscriber) {
+	r.React(Shutdown, s)
+}
+
+func (r *Reactor) Shutdown(d Data) {
 	r.evtIn.Close()
+	r.Fire(Shutdown, d)
+}
+
+func (r *Reactor) shutdown(e Event) Event {
+	r.shutdownCompleter.Complete(e.Data)
+	return e
 }
 
 func (r *Reactor) Fire(name string, data Data) {
@@ -50,7 +63,7 @@ func (r *Reactor) fireEvery(name string, data Data, d time.Duration) {
 	for c {
 		time.Sleep(d)
 		r.evtIn.Add(Event{name, data})
-		c = !r.shutdown.Completed()
+		c = !r.shutdownCompleter.Completed()
 	}
 }
 
@@ -61,7 +74,7 @@ func (r *Reactor) React(name string, handler Subscriber) {
 }
 
 func (r *Reactor) AddStream(name string, s *Stream) {
-	s.Listen(r.createEventFromStream(name)).CloseOnFuture(r.shutdown.Future())
+	s.Listen(r.createEventFromStream(name)).CloseOnFuture(r.shutdownCompleter.Future())
 }
 
 func (r *Reactor) createEventFromStream(name string) Subscriber {
@@ -76,7 +89,7 @@ func (r *Reactor) AddFuture(name string, f *Future) {
 
 func (r *Reactor) createEventFromFuture(name string) CompletionHandler {
 	return func(d Data) Data {
-		if !r.shutdown.Completed() {
+		if !r.shutdownCompleter.Completed() {
 			r.evtIn.Add(Event{name, d})
 		}
 		return nil
@@ -95,13 +108,12 @@ func (r *Reactor) CatchCtrlC() {
 
 func (r *Reactor) waitForInterrupt(c chan os.Signal) {
 	defer close(c)
-	<-c
-	r.Shutdown()
+	r.Shutdown(<-c)
 }
 
 func (r *Reactor) createEventFromFutureError(name string) ErrorHandler {
 	return func(e error) (Data, error) {
-		if !r.shutdown.Completed() {
+		if !r.shutdownCompleter.Completed() {
 			r.evtIn.Add(Event{name, e})
 		}
 		return nil, nil

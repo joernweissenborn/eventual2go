@@ -23,7 +23,7 @@ func NewCollector() (c *Collector) {
 }
 
 func (c *Collector) Remove() {
-	c.r.Shutdown()
+	c.r.Shutdown(nil)
 	c.remove.Complete(nil)
 }
 
