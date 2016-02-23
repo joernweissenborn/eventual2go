@@ -12,7 +12,7 @@ const (
 )
 
 type Reactor struct {
-	m                 *sync.Mutex
+	*sync.Mutex
 	evtIn             *EventStreamController
 	shutdownCompleter *Completer
 	eventRegister     map[string]Subscriber
@@ -21,7 +21,7 @@ type Reactor struct {
 func NewReactor() (r *Reactor) {
 
 	r = &Reactor{
-		m:                 new(sync.Mutex),
+		Mutex:             new(sync.Mutex),
 		evtIn:             NewEventStreamController(),
 		shutdownCompleter: NewCompleter(),
 		eventRegister:     map[string]Subscriber{},
@@ -68,8 +68,8 @@ func (r *Reactor) fireEvery(name string, data Data, d time.Duration) {
 }
 
 func (r *Reactor) React(name string, handler Subscriber) {
-	r.m.Lock()
-	defer r.m.Unlock()
+	r.Lock()
+	defer r.Unlock()
 	r.eventRegister[name] = handler
 }
 
@@ -85,6 +85,10 @@ func (r *Reactor) createEventFromStream(name string) Subscriber {
 
 func (r *Reactor) AddFuture(name string, f *Future) {
 	f.Then(r.createEventFromFuture(name))
+}
+
+func (r *Reactor) CollectEvent(name string, c *Collector) {
+	r.React(name,c.Add)
 }
 
 func (r *Reactor) createEventFromFuture(name string) CompletionHandler {
@@ -123,10 +127,10 @@ func (r *Reactor) createEventFromFutureError(name string) ErrorHandler {
 func (r *Reactor) react(ec chan Event) {
 
 	for evt := range ec {
-		r.m.Lock()
+		r.Lock()
 		if h, f := r.eventRegister[evt.Name]; f {
 			h(evt.Data)
 		}
-		r.m.Unlock()
+		r.Unlock()
 	}
 }

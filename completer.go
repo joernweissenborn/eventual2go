@@ -2,7 +2,6 @@ package eventual2go
 
 import (
 	"errors"
-	"fmt"
 	"time"
 )
 
@@ -53,7 +52,6 @@ func (c *Completer) CompleteError(err error) {
 func timeout(c *Completer, d time.Duration) {
 	time.Sleep(d)
 	if !c.Completed() {
-		fmt.Println("complete")
 		c.CompleteError(ErrTimeout)
 	}
 }
