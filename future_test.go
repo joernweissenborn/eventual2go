@@ -31,7 +31,7 @@ func TestFutureBasicCompletion(t *testing.T) {
 func TestTimeoutCompletion(t *testing.T) {
 	cp := NewTimeoutCompleter(1 * time.Microsecond)
 	f := cp.Future()
-	time.Sleep(2 * time.Microsecond)
+	time.Sleep(10 * time.Millisecond)
 	if !f.Completed() {
 		t.Error("Timeout didnt complete")
 	}
