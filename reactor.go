@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	Shutdown = "shutdown"
+	ShutdownEvent = "shutdown"
 )
 
 type Reactor struct {
@@ -28,8 +28,10 @@ func NewReactor() (r *Reactor) {
 	}
 
 	r.evtIn.Stream().FirstWhere(func(e Event) bool {
-		return e.Name == Shutdown
+		return e.Name == ShutdownEvent
 	}).Then(r.shutdown)
+	
+	r.evtIn.Stream().CloseOnFuture(r.shutdownCompleter.Future())
 
 	go r.react(r.evtIn.Stream().AsChan())
 
@@ -37,12 +39,12 @@ func NewReactor() (r *Reactor) {
 }
 
 func (r *Reactor) OnShutdown(s Subscriber) {
-	r.React(Shutdown, s)
+	r.React(ShutdownEvent, s)
 }
 
 func (r *Reactor) Shutdown(d Data) {
 	r.evtIn.Close()
-	r.Fire(Shutdown, d)
+	r.Fire(ShutdownEvent, d)
 }
 
 func (r *Reactor) shutdown(e Event) Event {
