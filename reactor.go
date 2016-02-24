@@ -27,12 +27,6 @@ func NewReactor() (r *Reactor) {
 		eventRegister:     map[string]Subscriber{},
 	}
 
-	r.evtIn.Stream().FirstWhere(func(e Event) bool {
-		return e.Name == ShutdownEvent
-	}).Then(r.shutdown)
-	
-	r.evtIn.Stream().CloseOnFuture(r.shutdownCompleter.Future())
-
 	go r.react(r.evtIn.Stream().AsChan())
 
 	return
@@ -43,13 +37,12 @@ func (r *Reactor) OnShutdown(s Subscriber) {
 }
 
 func (r *Reactor) Shutdown(d Data) {
-	r.evtIn.Close()
 	r.Fire(ShutdownEvent, d)
 }
 
-func (r *Reactor) shutdown(e Event) Event {
-	r.shutdownCompleter.Complete(e.Data)
-	return e
+func (r *Reactor) shutdown() {
+	r.evtIn.Close()
+	r.shutdownCompleter.Complete(nil)
 }
 
 func (r *Reactor) Fire(name string, data Data) {
@@ -61,11 +54,12 @@ func (r *Reactor) FireEvery(name string, data Data, interval time.Duration) {
 }
 
 func (r *Reactor) fireEvery(name string, data Data, d time.Duration) {
-	c := true
-	for c {
+	for {
 		time.Sleep(d)
+		if r.shutdownCompleter.Completed() {
+			return
+		}
 		r.evtIn.Add(Event{name, data})
-		c = !r.shutdownCompleter.Completed()
 	}
 }
 
@@ -90,7 +84,7 @@ func (r *Reactor) AddFuture(name string, f *Future) {
 }
 
 func (r *Reactor) CollectEvent(name string, c *Collector) {
-	r.React(name,c.Add)
+	r.React(name, c.Add)
 }
 
 func (r *Reactor) createEventFromFuture(name string) CompletionHandler {
@@ -132,6 +126,9 @@ func (r *Reactor) react(ec chan Event) {
 		r.Lock()
 		if h, f := r.eventRegister[evt.Name]; f {
 			h(evt.Data)
+		}
+		if evt.Name == ShutdownEvent {
+			r.shutdown()
 		}
 		r.Unlock()
 	}

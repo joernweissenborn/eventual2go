@@ -1,5 +1,7 @@
 package eventual2go
 
+import "fmt"
+
 // A StreamController is Stream where elements can be added manually or other Streams joined in.
 type StreamController struct {
 	s *Stream
@@ -11,7 +13,7 @@ func (sc *StreamController) Add(Data Data) {
 		panic("Add on noninitialized StreamController")
 	}
 	if sc.s.closed.Completed() {
-		panic("Add on closed stream")
+		panic(fmt.Sprint("Add on closed stream", Data))
 	}
 	sc.s.add(Data)
 }
