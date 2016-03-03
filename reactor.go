@@ -7,15 +7,13 @@ import (
 	"time"
 )
 
-const (
-	ShutdownEvent = "shutdown"
-)
+type ShutdownEvent struct{}
 
 type Reactor struct {
 	*sync.Mutex
 	evtIn             *EventStreamController
 	shutdownCompleter *Completer
-	eventRegister     map[string]Subscriber
+	eventRegister     map[interface{}]Subscriber
 }
 
 func NewReactor() (r *Reactor) {
@@ -24,7 +22,7 @@ func NewReactor() (r *Reactor) {
 		Mutex:             new(sync.Mutex),
 		evtIn:             NewEventStreamController(),
 		shutdownCompleter: NewCompleter(),
-		eventRegister:     map[string]Subscriber{},
+		eventRegister:     map[interface{}]Subscriber{},
 	}
 
 	go r.react(r.evtIn.Stream().AsChan())
@@ -33,11 +31,11 @@ func NewReactor() (r *Reactor) {
 }
 
 func (r *Reactor) OnShutdown(s Subscriber) {
-	r.React(ShutdownEvent, s)
+	r.React(ShutdownEvent{}, s)
 }
 
 func (r *Reactor) Shutdown(d Data) {
-	r.Fire(ShutdownEvent, d)
+	r.Fire(ShutdownEvent{}, d)
 }
 
 func (r *Reactor) shutdown() {
@@ -45,59 +43,82 @@ func (r *Reactor) shutdown() {
 	r.shutdownCompleter.Complete(nil)
 }
 
-func (r *Reactor) Fire(name string, data Data) {
-	r.evtIn.Add(Event{name, data})
+func (r *Reactor) Fire(classifer interface{}, data Data) {
+	r.evtIn.Add(Event{classifer, data})
 }
 
-func (r *Reactor) FireEvery(name string, data Data, interval time.Duration) {
-	go r.fireEvery(name, data, interval)
+func (r *Reactor) FireEvery(classifer interface{}, data Data, interval time.Duration) {
+	go r.fireEvery(classifer, data, interval)
 }
 
-func (r *Reactor) fireEvery(name string, data Data, d time.Duration) {
+func (r *Reactor) fireEvery(classifer interface{}, data Data, d time.Duration) {
 	for {
 		time.Sleep(d)
 		if r.shutdownCompleter.Completed() {
 			return
 		}
-		r.evtIn.Add(Event{name, data})
+		r.evtIn.Add(Event{classifer, data})
 	}
 }
 
-func (r *Reactor) React(name string, handler Subscriber) {
+func (r *Reactor) React(classifer interface{}, handler Subscriber) {
 	r.Lock()
 	defer r.Unlock()
-	r.eventRegister[name] = handler
+	r.eventRegister[classifer] = handler
 }
 
-func (r *Reactor) AddStream(name string, s *Stream) {
-	s.Listen(r.createEventFromStream(name)).CloseOnFuture(r.shutdownCompleter.Future())
+func (r *Reactor) AddStream(classifer interface{}, s *Stream) {
+	s.Listen(r.createEventFromStream(classifer)).CloseOnFuture(r.shutdownCompleter.Future())
 }
 
-func (r *Reactor) createEventFromStream(name string) Subscriber {
+func (r *Reactor) createEventFromStream(classifer interface{}) Subscriber {
 	return func(d Data) {
-		r.evtIn.Add(Event{name, d})
+		r.evtIn.Add(Event{classifer, d})
 	}
 }
 
-func (r *Reactor) AddFuture(name string, f *Future) {
-	f.Then(r.createEventFromFuture(name))
+func (r *Reactor) AddFuture(classifer interface{}, f *Future) {
+	f.Then(r.createEventFromFuture(classifer))
 }
 
-func (r *Reactor) CollectEvent(name string, c *Collector) {
-	r.React(name, c.Add)
+func (r *Reactor) CollectEvent(classifer interface{}, c *Collector) {
+	r.React(classifer, c.Add)
 }
 
-func (r *Reactor) createEventFromFuture(name string) CompletionHandler {
+func (r *Reactor) createEventFromFuture(classifer interface{}) CompletionHandler {
 	return func(d Data) Data {
 		if !r.shutdownCompleter.Completed() {
-			r.evtIn.Add(Event{name, d})
+			r.evtIn.Add(Event{classifer, d})
 		}
 		return nil
 	}
 }
 
-func (r *Reactor) AddFutureError(name string, f *Future) {
-	f.Err(r.createEventFromFutureError(name))
+func (r *Reactor) AddFutureError(classifer interface{}, f *Future) {
+	f.Err(r.createEventFromFutureError(classifer))
+}
+
+func (r *Reactor) createEventFromFutureError(classifer interface{}) ErrorHandler {
+	return func(e error) (Data, error) {
+		if !r.shutdownCompleter.Completed() {
+			r.evtIn.Add(Event{classifer, e})
+		}
+		return nil, nil
+	}
+}
+
+func (r *Reactor) react(ec chan Event) {
+
+	for evt := range ec {
+		r.Lock()
+		if h, f := r.eventRegister[evt.Classifier]; f {
+			h(evt.Data)
+		}
+		if evt.Classifier == (ShutdownEvent{}) {
+			r.shutdown()
+		}
+		r.Unlock()
+	}
 }
 
 func (r *Reactor) CatchCtrlC() {
@@ -109,27 +130,4 @@ func (r *Reactor) CatchCtrlC() {
 func (r *Reactor) waitForInterrupt(c chan os.Signal) {
 	defer close(c)
 	r.Shutdown(<-c)
-}
-
-func (r *Reactor) createEventFromFutureError(name string) ErrorHandler {
-	return func(e error) (Data, error) {
-		if !r.shutdownCompleter.Completed() {
-			r.evtIn.Add(Event{name, e})
-		}
-		return nil, nil
-	}
-}
-
-func (r *Reactor) react(ec chan Event) {
-
-	for evt := range ec {
-		r.Lock()
-		if h, f := r.eventRegister[evt.Name]; f {
-			h(evt.Data)
-		}
-		if evt.Name == ShutdownEvent {
-			r.shutdown()
-		}
-		r.Unlock()
-	}
 }
