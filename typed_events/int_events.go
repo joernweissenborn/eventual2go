@@ -115,6 +115,10 @@ func (s *IntStream) WhereNot(f IntFilter) *IntStream {
 	return &IntStream{s.Stream.WhereNot(f.toFilter())}
 }
 
+func (s *IntStream) Split(f IntFilter) (*IntStream, *IntStream)  {
+	return s.Where(f), s.WhereNot(f)
+}
+
 func (s *IntStream) First() *IntFuture {
 	return &IntFuture{s.Stream.First()}
 }

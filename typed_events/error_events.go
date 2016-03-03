@@ -115,6 +115,10 @@ func (s *ErrorStream) WhereNot(f ErrorFilter) *ErrorStream {
 	return &ErrorStream{s.Stream.WhereNot(f.toFilter())}
 }
 
+func (s *ErrorStream) Split(f ErrorFilter) (*ErrorStream, *ErrorStream)  {
+	return s.Where(f), s.WhereNot(f)
+}
+
 func (s *ErrorStream) First() *ErrorFuture {
 	return &ErrorFuture{s.Stream.First()}
 }

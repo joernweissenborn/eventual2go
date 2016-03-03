@@ -122,7 +122,7 @@ func run(c *cli.Context) {
 	} else {
 		if outputFile == "" {
 			var name string
-			if len(names)!=0 {
+			if len(names) != 0 {
 				name = names[0]
 			} else {
 				name = typeNames[0]
@@ -280,6 +280,10 @@ func (s *{{.Name}}Stream) Where(f {{.Name}}Filter) *{{.Name}}Stream {
 
 func (s *{{.Name}}Stream) WhereNot(f {{.Name}}Filter) *{{.Name}}Stream {
 	return &{{.Name}}Stream{s.Stream.WhereNot(f.toFilter())}
+}
+
+func (s *{{.Name}}Stream) Split(f {{.Name}}Filter) (*{{.Name}}Stream, *{{.Name}}Stream)  {
+	return s.Where(f), s.WhereNot(f)
 }
 
 func (s *{{.Name}}Stream) First() *{{.Name}}Future {

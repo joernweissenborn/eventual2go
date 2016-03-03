@@ -115,6 +115,10 @@ func (s *BoolStream) WhereNot(f BoolFilter) *BoolStream {
 	return &BoolStream{s.Stream.WhereNot(f.toFilter())}
 }
 
+func (s *BoolStream) Split(f BoolFilter) (*BoolStream, *BoolStream)  {
+	return s.Where(f), s.WhereNot(f)
+}
+
 func (s *BoolStream) First() *BoolFuture {
 	return &BoolFuture{s.Stream.First()}
 }

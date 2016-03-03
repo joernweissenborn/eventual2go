@@ -115,6 +115,10 @@ func (s *StringSliceStream) WhereNot(f StringSliceFilter) *StringSliceStream {
 	return &StringSliceStream{s.Stream.WhereNot(f.toFilter())}
 }
 
+func (s *StringSliceStream) Split(f StringSliceFilter) (*StringSliceStream, *StringSliceStream)  {
+	return s.Where(f), s.WhereNot(f)
+}
+
 func (s *StringSliceStream) First() *StringSliceFuture {
 	return &StringSliceFuture{s.Stream.First()}
 }
