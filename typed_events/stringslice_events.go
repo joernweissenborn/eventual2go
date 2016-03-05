@@ -149,3 +149,31 @@ func closeStringSliceChan(c chan []string) eventual2go.CompletionHandler {
 		return nil
 	}
 }
+
+type StringSliceCollector struct {
+	*eventual2go.Collector
+}
+
+func NewStringSliceCollector() *StringSliceCollector {
+	return &StringSliceCollector{eventual2go.NewCollector}
+}
+
+func (c *StringSliceCollector) Add(d []string) {
+	c.Collector.Add(d)
+}
+
+func (c *StringSliceCollector) AddFuture(f *StringSliceFuture) {
+	c.Collector.Add(f.Future)
+}
+
+func (c *StringSliceCollector) AddStream(s *StringSliceStream) {
+	c.Collector.AddStream(s.Stream)
+}
+
+func (c *StringSliceCollector) Get() []string {
+	return c.Collector.Get().([]string)
+}
+
+func (c *StringSliceCollector) Preview() []string {
+	return c.Collector.Preview().([]string)
+}

@@ -149,3 +149,31 @@ func closeBoolChan(c chan bool) eventual2go.CompletionHandler {
 		return nil
 	}
 }
+
+type BoolCollector struct {
+	*eventual2go.Collector
+}
+
+func NewBoolCollector() *BoolCollector {
+	return &BoolCollector{eventual2go.NewCollector}
+}
+
+func (c *BoolCollector) Add(d bool) {
+	c.Collector.Add(d)
+}
+
+func (c *BoolCollector) AddFuture(f *BoolFuture) {
+	c.Collector.Add(f.Future)
+}
+
+func (c *BoolCollector) AddStream(s *BoolStream) {
+	c.Collector.AddStream(s.Stream)
+}
+
+func (c *BoolCollector) Get() bool {
+	return c.Collector.Get().(bool)
+}
+
+func (c *BoolCollector) Preview() bool {
+	return c.Collector.Preview().(bool)
+}

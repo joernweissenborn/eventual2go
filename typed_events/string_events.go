@@ -149,3 +149,31 @@ func closeStringChan(c chan string) eventual2go.CompletionHandler {
 		return nil
 	}
 }
+
+type StringCollector struct {
+	*eventual2go.Collector
+}
+
+func NewStringCollector() *StringCollector {
+	return &StringCollector{eventual2go.NewCollector}
+}
+
+func (c *StringCollector) Add(d string) {
+	c.Collector.Add(d)
+}
+
+func (c *StringCollector) AddFuture(f *StringFuture) {
+	c.Collector.Add(f.Future)
+}
+
+func (c *StringCollector) AddStream(s *StringStream) {
+	c.Collector.AddStream(s.Stream)
+}
+
+func (c *StringCollector) Get() string {
+	return c.Collector.Get().(string)
+}
+
+func (c *StringCollector) Preview() string {
+	return c.Collector.Preview().(string)
+}

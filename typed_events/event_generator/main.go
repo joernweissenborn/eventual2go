@@ -316,4 +316,32 @@ func close{{.Name}}Chan(c chan {{.TypeName}}) eventual2go.CompletionHandler {
 		return nil
 	}
 }
+
+type {{.Name}}Collector struct {
+	*eventual2go.Collector
+}
+
+func New{{.Name}}Collector() *{{.Name}}Collector {
+	return &{{.Name}}Collector{eventual2go.NewCollector}
+}
+
+func (c *{{.Name}}Collector) Add(d {{.TypeName}}) {
+	c.Collector.Add(d)
+}
+
+func (c *{{.Name}}Collector) AddFuture(f *{{.Name}}Future) {
+	c.Collector.Add(f.Future)
+}
+
+func (c *{{.Name}}Collector) AddStream(s *{{.Name}}Stream) {
+	c.Collector.AddStream(s.Stream)
+}
+
+func (c *{{.Name}}Collector) Get() {{.TypeName}} {
+	return c.Collector.Get().({{.TypeName}})
+}
+
+func (c *{{.Name}}Collector) Preview() {{.TypeName}} {
+	return c.Collector.Preview().({{.TypeName}})
+}
 `

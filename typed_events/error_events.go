@@ -149,3 +149,31 @@ func closeErrorChan(c chan error) eventual2go.CompletionHandler {
 		return nil
 	}
 }
+
+type ErrorCollector struct {
+	*eventual2go.Collector
+}
+
+func NewErrorCollector() *ErrorCollector {
+	return &ErrorCollector{eventual2go.NewCollector}
+}
+
+func (c *ErrorCollector) Add(d error) {
+	c.Collector.Add(d)
+}
+
+func (c *ErrorCollector) AddFuture(f *ErrorFuture) {
+	c.Collector.Add(f.Future)
+}
+
+func (c *ErrorCollector) AddStream(s *ErrorStream) {
+	c.Collector.AddStream(s.Stream)
+}
+
+func (c *ErrorCollector) Get() error {
+	return c.Collector.Get().(error)
+}
+
+func (c *ErrorCollector) Preview() error {
+	return c.Collector.Preview().(error)
+}

@@ -149,3 +149,31 @@ func closeIntChan(c chan int) eventual2go.CompletionHandler {
 		return nil
 	}
 }
+
+type IntCollector struct {
+	*eventual2go.Collector
+}
+
+func NewIntCollector() *IntCollector {
+	return &IntCollector{eventual2go.NewCollector}
+}
+
+func (c *IntCollector) Add(d int) {
+	c.Collector.Add(d)
+}
+
+func (c *IntCollector) AddFuture(f *IntFuture) {
+	c.Collector.Add(f.Future)
+}
+
+func (c *IntCollector) AddStream(s *IntStream) {
+	c.Collector.AddStream(s.Stream)
+}
+
+func (c *IntCollector) Get() int {
+	return c.Collector.Get().(int)
+}
+
+func (c *IntCollector) Preview() int {
+	return c.Collector.Preview().(int)
+}
