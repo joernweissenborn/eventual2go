@@ -31,6 +31,10 @@ type StringSliceFuture struct {
 	*eventual2go.Future
 }
 
+func (f *StringSliceFuture) GetResult() []string {
+	return f.Future.GetResult().([]string)
+}
+
 type StringSliceCompletionHandler func([]string) []string
 
 func (ch StringSliceCompletionHandler) toCompletionHandler() eventual2go.CompletionHandler {
@@ -91,14 +95,14 @@ type StringSliceStream struct {
 	*eventual2go.Stream
 }
 
-type StringSliceSuscriber func([]string)
+type StringSliceSubscriber func([]string)
 
-func (l StringSliceSuscriber) toSuscriber() eventual2go.Subscriber {
+func (l StringSliceSubscriber) toSubscriber() eventual2go.Subscriber {
 	return func(d eventual2go.Data) { l(d.([]string)) }
 }
 
-func (s *StringSliceStream) Listen(ss StringSliceSuscriber) *eventual2go.Subscription {
-	return s.Stream.Listen(ss.toSuscriber())
+func (s *StringSliceStream) Listen(ss StringSliceSubscriber) *eventual2go.Subscription {
+	return s.Stream.Listen(ss.toSubscriber())
 }
 
 type StringSliceFilter func([]string) bool
@@ -137,7 +141,7 @@ func (s *StringSliceStream) AsChan() (c chan []string) {
 	return
 }
 
-func pipeToStringSliceChan(c chan []string) StringSliceSuscriber {
+func pipeToStringSliceChan(c chan []string) StringSliceSubscriber {
 	return func(d []string) {
 		c <- d
 	}
@@ -155,7 +159,7 @@ type StringSliceCollector struct {
 }
 
 func NewStringSliceCollector() *StringSliceCollector {
-	return &StringSliceCollector{eventual2go.NewCollector}
+	return &StringSliceCollector{eventual2go.NewCollector()}
 }
 
 func (c *StringSliceCollector) Add(d []string) {

@@ -31,6 +31,10 @@ type IntFuture struct {
 	*eventual2go.Future
 }
 
+func (f *IntFuture) GetResult() int {
+	return f.Future.GetResult().(int)
+}
+
 type IntCompletionHandler func(int) int
 
 func (ch IntCompletionHandler) toCompletionHandler() eventual2go.CompletionHandler {
@@ -91,14 +95,14 @@ type IntStream struct {
 	*eventual2go.Stream
 }
 
-type IntSuscriber func(int)
+type IntSubscriber func(int)
 
-func (l IntSuscriber) toSuscriber() eventual2go.Subscriber {
+func (l IntSubscriber) toSubscriber() eventual2go.Subscriber {
 	return func(d eventual2go.Data) { l(d.(int)) }
 }
 
-func (s *IntStream) Listen(ss IntSuscriber) *eventual2go.Subscription {
-	return s.Stream.Listen(ss.toSuscriber())
+func (s *IntStream) Listen(ss IntSubscriber) *eventual2go.Subscription {
+	return s.Stream.Listen(ss.toSubscriber())
 }
 
 type IntFilter func(int) bool
@@ -137,7 +141,7 @@ func (s *IntStream) AsChan() (c chan int) {
 	return
 }
 
-func pipeToIntChan(c chan int) IntSuscriber {
+func pipeToIntChan(c chan int) IntSubscriber {
 	return func(d int) {
 		c <- d
 	}
@@ -155,7 +159,7 @@ type IntCollector struct {
 }
 
 func NewIntCollector() *IntCollector {
-	return &IntCollector{eventual2go.NewCollector}
+	return &IntCollector{eventual2go.NewCollector()}
 }
 
 func (c *IntCollector) Add(d int) {

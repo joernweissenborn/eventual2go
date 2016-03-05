@@ -198,6 +198,10 @@ type {{.Name}}Future struct {
 	*eventual2go.Future
 }
 
+func (f *{{.Name}}Future) GetResult() {{.TypeName}} {
+	return f.Future.GetResult().({{.TypeName}})
+}
+
 type {{.Name}}CompletionHandler func({{.TypeName}}) {{.TypeName}}
 
 func (ch {{.Name}}CompletionHandler) toCompletionHandler() eventual2go.CompletionHandler {
@@ -258,14 +262,14 @@ type {{.Name}}Stream struct {
 	*eventual2go.Stream
 }
 
-type {{.Name}}Suscriber func({{.TypeName}})
+type {{.Name}}Subscriber func({{.TypeName}})
 
-func (l {{.Name}}Suscriber) toSuscriber() eventual2go.Subscriber {
+func (l {{.Name}}Subscriber) toSubscriber() eventual2go.Subscriber {
 	return func(d eventual2go.Data) { l(d.({{.TypeName}})) }
 }
 
-func (s *{{.Name}}Stream) Listen(ss {{.Name}}Suscriber) *eventual2go.Subscription {
-	return s.Stream.Listen(ss.toSuscriber())
+func (s *{{.Name}}Stream) Listen(ss {{.Name}}Subscriber) *eventual2go.Subscription {
+	return s.Stream.Listen(ss.toSubscriber())
 }
 
 type {{.Name}}Filter func({{.TypeName}}) bool
@@ -304,7 +308,7 @@ func (s *{{.Name}}Stream) AsChan() (c chan {{.TypeName}}) {
 	return
 }
 
-func pipeTo{{.Name}}Chan(c chan {{.TypeName}}) {{.Name}}Suscriber {
+func pipeTo{{.Name}}Chan(c chan {{.TypeName}}) {{.Name}}Subscriber {
 	return func(d {{.TypeName}}) {
 		c <- d
 	}
@@ -322,7 +326,7 @@ type {{.Name}}Collector struct {
 }
 
 func New{{.Name}}Collector() *{{.Name}}Collector {
-	return &{{.Name}}Collector{eventual2go.NewCollector}
+	return &{{.Name}}Collector{eventual2go.NewCollector()}
 }
 
 func (c *{{.Name}}Collector) Add(d {{.TypeName}}) {

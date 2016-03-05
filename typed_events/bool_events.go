@@ -31,6 +31,10 @@ type BoolFuture struct {
 	*eventual2go.Future
 }
 
+func (f *BoolFuture) GetResult() bool {
+	return f.Future.GetResult().(bool)
+}
+
 type BoolCompletionHandler func(bool) bool
 
 func (ch BoolCompletionHandler) toCompletionHandler() eventual2go.CompletionHandler {
@@ -91,14 +95,14 @@ type BoolStream struct {
 	*eventual2go.Stream
 }
 
-type BoolSuscriber func(bool)
+type BoolSubscriber func(bool)
 
-func (l BoolSuscriber) toSuscriber() eventual2go.Subscriber {
+func (l BoolSubscriber) toSubscriber() eventual2go.Subscriber {
 	return func(d eventual2go.Data) { l(d.(bool)) }
 }
 
-func (s *BoolStream) Listen(ss BoolSuscriber) *eventual2go.Subscription {
-	return s.Stream.Listen(ss.toSuscriber())
+func (s *BoolStream) Listen(ss BoolSubscriber) *eventual2go.Subscription {
+	return s.Stream.Listen(ss.toSubscriber())
 }
 
 type BoolFilter func(bool) bool
@@ -137,7 +141,7 @@ func (s *BoolStream) AsChan() (c chan bool) {
 	return
 }
 
-func pipeToBoolChan(c chan bool) BoolSuscriber {
+func pipeToBoolChan(c chan bool) BoolSubscriber {
 	return func(d bool) {
 		c <- d
 	}
@@ -155,7 +159,7 @@ type BoolCollector struct {
 }
 
 func NewBoolCollector() *BoolCollector {
-	return &BoolCollector{eventual2go.NewCollector}
+	return &BoolCollector{eventual2go.NewCollector()}
 }
 
 func (c *BoolCollector) Add(d bool) {

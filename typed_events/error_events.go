@@ -31,6 +31,10 @@ type ErrorFuture struct {
 	*eventual2go.Future
 }
 
+func (f *ErrorFuture) GetResult() error {
+	return f.Future.GetResult().(error)
+}
+
 type ErrorCompletionHandler func(error) error
 
 func (ch ErrorCompletionHandler) toCompletionHandler() eventual2go.CompletionHandler {
@@ -91,14 +95,14 @@ type ErrorStream struct {
 	*eventual2go.Stream
 }
 
-type ErrorSuscriber func(error)
+type ErrorSubscriber func(error)
 
-func (l ErrorSuscriber) toSuscriber() eventual2go.Subscriber {
+func (l ErrorSubscriber) toSubscriber() eventual2go.Subscriber {
 	return func(d eventual2go.Data) { l(d.(error)) }
 }
 
-func (s *ErrorStream) Listen(ss ErrorSuscriber) *eventual2go.Subscription {
-	return s.Stream.Listen(ss.toSuscriber())
+func (s *ErrorStream) Listen(ss ErrorSubscriber) *eventual2go.Subscription {
+	return s.Stream.Listen(ss.toSubscriber())
 }
 
 type ErrorFilter func(error) bool
@@ -137,7 +141,7 @@ func (s *ErrorStream) AsChan() (c chan error) {
 	return
 }
 
-func pipeToErrorChan(c chan error) ErrorSuscriber {
+func pipeToErrorChan(c chan error) ErrorSubscriber {
 	return func(d error) {
 		c <- d
 	}
@@ -155,7 +159,7 @@ type ErrorCollector struct {
 }
 
 func NewErrorCollector() *ErrorCollector {
-	return &ErrorCollector{eventual2go.NewCollector}
+	return &ErrorCollector{eventual2go.NewCollector()}
 }
 
 func (c *ErrorCollector) Add(d error) {

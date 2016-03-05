@@ -31,6 +31,10 @@ type StringFuture struct {
 	*eventual2go.Future
 }
 
+func (f *StringFuture) GetResult() string {
+	return f.Future.GetResult().(string)
+}
+
 type StringCompletionHandler func(string) string
 
 func (ch StringCompletionHandler) toCompletionHandler() eventual2go.CompletionHandler {
@@ -91,14 +95,14 @@ type StringStream struct {
 	*eventual2go.Stream
 }
 
-type StringSuscriber func(string)
+type StringSubscriber func(string)
 
-func (l StringSuscriber) toSuscriber() eventual2go.Subscriber {
+func (l StringSubscriber) toSubscriber() eventual2go.Subscriber {
 	return func(d eventual2go.Data) { l(d.(string)) }
 }
 
-func (s *StringStream) Listen(ss StringSuscriber) *eventual2go.Subscription {
-	return s.Stream.Listen(ss.toSuscriber())
+func (s *StringStream) Listen(ss StringSubscriber) *eventual2go.Subscription {
+	return s.Stream.Listen(ss.toSubscriber())
 }
 
 type StringFilter func(string) bool
@@ -137,7 +141,7 @@ func (s *StringStream) AsChan() (c chan string) {
 	return
 }
 
-func pipeToStringChan(c chan string) StringSuscriber {
+func pipeToStringChan(c chan string) StringSubscriber {
 	return func(d string) {
 		c <- d
 	}
@@ -155,7 +159,7 @@ type StringCollector struct {
 }
 
 func NewStringCollector() *StringCollector {
-	return &StringCollector{eventual2go.NewCollector}
+	return &StringCollector{eventual2go.NewCollector()}
 }
 
 func (c *StringCollector) Add(d string) {
