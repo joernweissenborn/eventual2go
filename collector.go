@@ -27,6 +27,10 @@ func (c *Collector) Remove() {
 	c.remove.Complete(nil)
 }
 
+func (c *Collector) Removed() *Future {
+	return c.remove.Future()
+}
+
 func (c *Collector) Add(d Data) {
 	c.r.Fire("add", d)
 }
