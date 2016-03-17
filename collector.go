@@ -6,20 +6,21 @@ type Collector struct {
 	remove *Completer
 }
 
+type addEvent struct{}
+
 func NewCollector() (c *Collector) {
 
 	c = &Collector{
-		NewReactor(),
-		[]Data{},
-		NewCompleter(),
+		r:      NewReactor(),
+		remove: NewCompleter(),
 	}
 
-	c.r.React("add", c.collect)
-	c.r.React("get", c.get)
-	c.r.React("empty", c.empty)
-	c.r.React("preview", c.preview)
-
+	c.r.React(addEvent{}, c.collect)
 	return
+}
+
+func (c *Collector) collect(d Data) {
+	c.pile = append(c.pile, d)
 }
 
 func (c *Collector) Remove() {
@@ -32,7 +33,7 @@ func (c *Collector) Removed() *Future {
 }
 
 func (c *Collector) Add(d Data) {
-	c.r.Fire("add", d)
+	c.r.Fire(addEvent{}, d)
 }
 
 func (c *Collector) AddStream(s *Stream) {
@@ -58,61 +59,27 @@ func (c *Collector) collectFutureErr(e error) (Data, error) {
 }
 
 func (c *Collector) Get() (d Data) {
-	cd := make(chan Data)
-	defer close(cd)
-	c.r.Fire("get", cd)
-	d = <-cd
+	c.r.Lock()
+	defer c.r.Unlock()
+	if len(c.pile) != 0 {
+		d = c.pile[0]
+		c.pile = c.pile[1:]
+	}
 	return
 }
 
 func (c *Collector) Preview() (d Data) {
-	cd := make(chan Data)
-	defer close(cd)
-	c.r.Fire("preview", cd)
-	d = <-cd
+	c.r.Lock()
+	defer c.r.Unlock()
+	if len(c.pile) != 0 {
+		d = c.pile[0]
+	}
 	return
 }
 
 func (c *Collector) Empty() (e bool) {
-	cd := make(chan bool)
-	defer close(cd)
-	c.r.Fire("empty", cd)
-	e = <-cd
+	c.r.Lock()
+	defer c.r.Unlock()
+	e = len(c.pile) == 0
 	return
-}
-
-func (c *Collector) collect(d Data) {
-
-	c.pile = append(c.pile, d)
-
-}
-
-func (c *Collector) get(d Data) {
-
-	cd := d.(chan Data)
-
-	if len(c.pile) != 0 {
-		cd <- c.pile[0]
-		c.pile = c.pile[1:]
-	} else {
-		cd <- nil
-	}
-
-}
-
-func (c *Collector) preview(d Data) {
-	cd := d.(chan Data)
-	if len(c.pile) != 0 {
-		cd <- c.pile[0]
-	} else {
-		cd <- nil
-	}
-}
-
-func (c *Collector) empty(d Data) {
-
-	cd := d.(chan bool)
-
-	cd <- len(c.pile) == 0
-
 }
