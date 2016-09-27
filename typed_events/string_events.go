@@ -111,12 +111,21 @@ func (f StringFilter) toFilter() eventual2go.Filter {
 	return func(d eventual2go.Data) bool { return f(d.(string)) }
 }
 
-func (s *StringStream) Where(f StringFilter) *StringStream {
-	return &StringStream{s.Stream.Where(f.toFilter())}
+func toStringFilterArray(f ...StringFilter) (filter []eventual2go.Filter){
+
+	filter = make([]eventual2go.Filter, len(f))
+	for i, el := range f {
+		filter[i] = el.toFilter()
+	}
+	return
 }
 
-func (s *StringStream) WhereNot(f StringFilter) *StringStream {
-	return &StringStream{s.Stream.WhereNot(f.toFilter())}
+func (s *StringStream) Where(f ...StringFilter) *StringStream {
+	return &StringStream{s.Stream.Where(toStringFilterArray(f...)...)}
+}
+
+func (s *StringStream) WhereNot(f ...StringFilter) *StringStream {
+	return &StringStream{s.Stream.WhereNot(toStringFilterArray(f...)...)}
 }
 
 func (s *StringStream) Split(f StringFilter) (*StringStream, *StringStream)  {
@@ -127,12 +136,12 @@ func (s *StringStream) First() *StringFuture {
 	return &StringFuture{s.Stream.First()}
 }
 
-func (s *StringStream) FirstWhere(f StringFilter) *StringFuture {
-	return &StringFuture{s.Stream.FirstWhere(f.toFilter())}
+func (s *StringStream) FirstWhere(f... StringFilter) *StringFuture {
+	return &StringFuture{s.Stream.FirstWhere(toStringFilterArray(f...)...)}
 }
 
-func (s *StringStream) FirstWhereNot(f StringFilter) *StringFuture {
-	return &StringFuture{s.Stream.FirstWhereNot(f.toFilter())}
+func (s *StringStream) FirstWhereNot(f ...StringFilter) *StringFuture {
+	return &StringFuture{s.Stream.FirstWhereNot(toStringFilterArray(f...)...)}
 }
 
 func (s *StringStream) AsChan() (c chan string) {

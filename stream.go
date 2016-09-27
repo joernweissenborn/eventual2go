@@ -108,7 +108,7 @@ func (s *Stream) Where(f ...Filter) (fs *Stream) {
 
 func filter(s *Stream, f []Filter) Subscriber {
 	return func(d Data) {
-		for _,ff := range f {
+		for _, ff := range f {
 			if !ff(d) {
 				return
 			}
@@ -118,17 +118,20 @@ func filter(s *Stream, f []Filter) Subscriber {
 }
 
 // WhereNot registers a Filter function and returns the filtered stream. Elements will be added if the Filter returns FALSE.
-func (s *Stream) WhereNot(f Filter) (fs *Stream) {
+func (s *Stream) WhereNot(f ...Filter) (fs *Stream) {
 	fs = NewStream()
 	s.Listen(filterNot(fs, f)).CloseOnFuture(fs.closed.Future())
 	return
 }
 
-func filterNot(s *Stream, f Filter) Subscriber {
+func filterNot(s *Stream, f []Filter) Subscriber {
 	return func(d Data) {
-		if !f(d) {
-			s.add(d)
+		for _, ff := range f {
+			if ff(d) {
+				return
+			}
 		}
+		s.add(d)
 	}
 }
 
@@ -154,8 +157,8 @@ func (s *Stream) FirstWhere(f ...Filter) *Future {
 }
 
 // FirstWhereNot returns a future that will be completed with the first element added to the stream where filter returns FALSE.
-func (s *Stream) FirstWhereNot(f Filter) *Future {
-	return s.WhereNot(f).First()
+func (s *Stream) FirstWhereNot(f ...Filter) *Future {
+	return s.WhereNot(f...).First()
 }
 
 // Split returns a stream with all elements where the filter returns TRUE and one where the filter returns FALSE.

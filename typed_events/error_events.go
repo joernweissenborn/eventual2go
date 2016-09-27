@@ -111,12 +111,21 @@ func (f ErrorFilter) toFilter() eventual2go.Filter {
 	return func(d eventual2go.Data) bool { return f(d.(error)) }
 }
 
-func (s *ErrorStream) Where(f ErrorFilter) *ErrorStream {
-	return &ErrorStream{s.Stream.Where(f.toFilter())}
+func toErrorFilterArray(f ...ErrorFilter) (filter []eventual2go.Filter){
+
+	filter = make([]eventual2go.Filter, len(f))
+	for i, el := range f {
+		filter[i] = el.toFilter()
+	}
+	return
 }
 
-func (s *ErrorStream) WhereNot(f ErrorFilter) *ErrorStream {
-	return &ErrorStream{s.Stream.WhereNot(f.toFilter())}
+func (s *ErrorStream) Where(f ...ErrorFilter) *ErrorStream {
+	return &ErrorStream{s.Stream.Where(toErrorFilterArray(f...)...)}
+}
+
+func (s *ErrorStream) WhereNot(f ...ErrorFilter) *ErrorStream {
+	return &ErrorStream{s.Stream.WhereNot(toErrorFilterArray(f...)...)}
 }
 
 func (s *ErrorStream) Split(f ErrorFilter) (*ErrorStream, *ErrorStream)  {
@@ -127,12 +136,12 @@ func (s *ErrorStream) First() *ErrorFuture {
 	return &ErrorFuture{s.Stream.First()}
 }
 
-func (s *ErrorStream) FirstWhere(f ErrorFilter) *ErrorFuture {
-	return &ErrorFuture{s.Stream.FirstWhere(f.toFilter())}
+func (s *ErrorStream) FirstWhere(f... ErrorFilter) *ErrorFuture {
+	return &ErrorFuture{s.Stream.FirstWhere(toErrorFilterArray(f...)...)}
 }
 
-func (s *ErrorStream) FirstWhereNot(f ErrorFilter) *ErrorFuture {
-	return &ErrorFuture{s.Stream.FirstWhereNot(f.toFilter())}
+func (s *ErrorStream) FirstWhereNot(f ...ErrorFilter) *ErrorFuture {
+	return &ErrorFuture{s.Stream.FirstWhereNot(toErrorFilterArray(f...)...)}
 }
 
 func (s *ErrorStream) AsChan() (c chan error) {

@@ -111,12 +111,21 @@ func (f BoolFilter) toFilter() eventual2go.Filter {
 	return func(d eventual2go.Data) bool { return f(d.(bool)) }
 }
 
-func (s *BoolStream) Where(f BoolFilter) *BoolStream {
-	return &BoolStream{s.Stream.Where(f.toFilter())}
+func toBoolFilterArray(f ...BoolFilter) (filter []eventual2go.Filter){
+
+	filter = make([]eventual2go.Filter, len(f))
+	for i, el := range f {
+		filter[i] = el.toFilter()
+	}
+	return
 }
 
-func (s *BoolStream) WhereNot(f BoolFilter) *BoolStream {
-	return &BoolStream{s.Stream.WhereNot(f.toFilter())}
+func (s *BoolStream) Where(f ...BoolFilter) *BoolStream {
+	return &BoolStream{s.Stream.Where(toBoolFilterArray(f...)...)}
+}
+
+func (s *BoolStream) WhereNot(f ...BoolFilter) *BoolStream {
+	return &BoolStream{s.Stream.WhereNot(toBoolFilterArray(f...)...)}
 }
 
 func (s *BoolStream) Split(f BoolFilter) (*BoolStream, *BoolStream)  {
@@ -127,12 +136,12 @@ func (s *BoolStream) First() *BoolFuture {
 	return &BoolFuture{s.Stream.First()}
 }
 
-func (s *BoolStream) FirstWhere(f BoolFilter) *BoolFuture {
-	return &BoolFuture{s.Stream.FirstWhere(f.toFilter())}
+func (s *BoolStream) FirstWhere(f... BoolFilter) *BoolFuture {
+	return &BoolFuture{s.Stream.FirstWhere(toBoolFilterArray(f...)...)}
 }
 
-func (s *BoolStream) FirstWhereNot(f BoolFilter) *BoolFuture {
-	return &BoolFuture{s.Stream.FirstWhereNot(f.toFilter())}
+func (s *BoolStream) FirstWhereNot(f ...BoolFilter) *BoolFuture {
+	return &BoolFuture{s.Stream.FirstWhereNot(toBoolFilterArray(f...)...)}
 }
 
 func (s *BoolStream) AsChan() (c chan bool) {

@@ -111,12 +111,21 @@ func (f StringSliceFilter) toFilter() eventual2go.Filter {
 	return func(d eventual2go.Data) bool { return f(d.([]string)) }
 }
 
-func (s *StringSliceStream) Where(f StringSliceFilter) *StringSliceStream {
-	return &StringSliceStream{s.Stream.Where(f.toFilter())}
+func toStringSliceFilterArray(f ...StringSliceFilter) (filter []eventual2go.Filter){
+
+	filter = make([]eventual2go.Filter, len(f))
+	for i, el := range f {
+		filter[i] = el.toFilter()
+	}
+	return
 }
 
-func (s *StringSliceStream) WhereNot(f StringSliceFilter) *StringSliceStream {
-	return &StringSliceStream{s.Stream.WhereNot(f.toFilter())}
+func (s *StringSliceStream) Where(f ...StringSliceFilter) *StringSliceStream {
+	return &StringSliceStream{s.Stream.Where(toStringSliceFilterArray(f...)...)}
+}
+
+func (s *StringSliceStream) WhereNot(f ...StringSliceFilter) *StringSliceStream {
+	return &StringSliceStream{s.Stream.WhereNot(toStringSliceFilterArray(f...)...)}
 }
 
 func (s *StringSliceStream) Split(f StringSliceFilter) (*StringSliceStream, *StringSliceStream)  {
@@ -127,12 +136,12 @@ func (s *StringSliceStream) First() *StringSliceFuture {
 	return &StringSliceFuture{s.Stream.First()}
 }
 
-func (s *StringSliceStream) FirstWhere(f StringSliceFilter) *StringSliceFuture {
-	return &StringSliceFuture{s.Stream.FirstWhere(f.toFilter())}
+func (s *StringSliceStream) FirstWhere(f... StringSliceFilter) *StringSliceFuture {
+	return &StringSliceFuture{s.Stream.FirstWhere(toStringSliceFilterArray(f...)...)}
 }
 
-func (s *StringSliceStream) FirstWhereNot(f StringSliceFilter) *StringSliceFuture {
-	return &StringSliceFuture{s.Stream.FirstWhereNot(f.toFilter())}
+func (s *StringSliceStream) FirstWhereNot(f ...StringSliceFilter) *StringSliceFuture {
+	return &StringSliceFuture{s.Stream.FirstWhereNot(toStringSliceFilterArray(f...)...)}
 }
 
 func (s *StringSliceStream) AsChan() (c chan []string) {

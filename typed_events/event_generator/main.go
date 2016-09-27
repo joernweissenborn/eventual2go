@@ -278,12 +278,21 @@ func (f {{.Name}}Filter) toFilter() eventual2go.Filter {
 	return func(d eventual2go.Data) bool { return f(d.({{.TypeName}})) }
 }
 
-func (s *{{.Name}}Stream) Where(f {{.Name}}Filter) *{{.Name}}Stream {
-	return &{{.Name}}Stream{s.Stream.Where(f.toFilter())}
+func to{{.Name}}FilterArray(f ...{{.Name}}Filter) (filter []eventual2go.Filter){
+
+	filter = make([]eventual2go.Filter, len(f))
+	for i, el := range f {
+		filter[i] = el.toFilter()
+	}
+	return
 }
 
-func (s *{{.Name}}Stream) WhereNot(f {{.Name}}Filter) *{{.Name}}Stream {
-	return &{{.Name}}Stream{s.Stream.WhereNot(f.toFilter())}
+func (s *{{.Name}}Stream) Where(f ...{{.Name}}Filter) *{{.Name}}Stream {
+	return &{{.Name}}Stream{s.Stream.Where(to{{.Name}}FilterArray(f...)...)}
+}
+
+func (s *{{.Name}}Stream) WhereNot(f ...{{.Name}}Filter) *{{.Name}}Stream {
+	return &{{.Name}}Stream{s.Stream.WhereNot(to{{.Name}}FilterArray(f...)...)}
 }
 
 func (s *{{.Name}}Stream) Split(f {{.Name}}Filter) (*{{.Name}}Stream, *{{.Name}}Stream)  {
@@ -294,12 +303,12 @@ func (s *{{.Name}}Stream) First() *{{.Name}}Future {
 	return &{{.Name}}Future{s.Stream.First()}
 }
 
-func (s *{{.Name}}Stream) FirstWhere(f {{.Name}}Filter) *{{.Name}}Future {
-	return &{{.Name}}Future{s.Stream.FirstWhere(f.toFilter())}
+func (s *{{.Name}}Stream) FirstWhere(f... {{.Name}}Filter) *{{.Name}}Future {
+	return &{{.Name}}Future{s.Stream.FirstWhere(to{{.Name}}FilterArray(f...)...)}
 }
 
-func (s *{{.Name}}Stream) FirstWhereNot(f {{.Name}}Filter) *{{.Name}}Future {
-	return &{{.Name}}Future{s.Stream.FirstWhereNot(f.toFilter())}
+func (s *{{.Name}}Stream) FirstWhereNot(f ...{{.Name}}Filter) *{{.Name}}Future {
+	return &{{.Name}}Future{s.Stream.FirstWhereNot(to{{.Name}}FilterArray(f...)...)}
 }
 
 func (s *{{.Name}}Stream) AsChan() (c chan {{.TypeName}}) {
