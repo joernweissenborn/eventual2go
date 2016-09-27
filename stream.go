@@ -100,17 +100,20 @@ func transform(s *Stream, t Transformer) Subscriber {
 }
 
 // Where registers a Filter function and returns the filtered stream. Elements will be added if the Filter returns TRUE.
-func (s *Stream) Where(f Filter) (fs *Stream) {
+func (s *Stream) Where(f ...Filter) (fs *Stream) {
 	fs = NewStream()
 	s.Listen(filter(fs, f)).CloseOnFuture(fs.closed.Future())
 	return
 }
 
-func filter(s *Stream, f Filter) Subscriber {
+func filter(s *Stream, f []Filter) Subscriber {
 	return func(d Data) {
-		if f(d) {
-			s.add(d)
+		for _,ff := range f {
+			if !ff(d) {
+				return
+			}
 		}
+		s.add(d)
 	}
 }
 
@@ -146,8 +149,8 @@ func first(c *Completer) Subscriber {
 }
 
 // FirstWhere returns a future that will be completed with the first element added to the stream where filter returns TRUE.
-func (s *Stream) FirstWhere(f Filter) *Future {
-	return s.Where(f).First()
+func (s *Stream) FirstWhere(f ...Filter) *Future {
+	return s.Where(f...).First()
 }
 
 // FirstWhereNot returns a future that will be completed with the first element added to the stream where filter returns FALSE.
