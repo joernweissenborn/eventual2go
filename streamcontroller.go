@@ -1,7 +1,10 @@
 package eventual2go
 
+import "sync"
+
 // A StreamController is Stream where elements can be added manually or other Streams joined in.
 type StreamController struct {
+	m      *sync.Mutex
 	stream *Stream
 	next   *Completer
 }
@@ -9,6 +12,7 @@ type StreamController struct {
 // NewStreamController creates a new StreamController.
 func NewStreamController() (sc *StreamController) {
 	sc = &StreamController{
+		m:    &sync.Mutex{},
 		next: NewCompleter(),
 	}
 	sc.stream = newStream(sc.next.Future())
@@ -17,13 +21,20 @@ func NewStreamController() (sc *StreamController) {
 
 // Add adds an element to the stream.
 func (sc *StreamController) Add(d Data) {
-	next := NewCompleter()
-	sc.next.Complete(&streamEvent{
+	sc.m.Lock()
+	defer sc.m.Unlock()
+	next := sc.getNext()
+	next.Complete(&streamEvent{
 		data: d,
-		next: next.Future(),
+		next: sc.next.Future(),
 	})
-	sc.stream.updateNext(next.Future())
-	sc.next = next
+}
+
+func (sc *StreamController) getNext() (next *Completer) {
+	next = sc.next
+	sc.next = NewCompleter()
+	sc.stream.updateNext(sc.next.Future())
+	return
 }
 
 // Stream return the underlying stream.
