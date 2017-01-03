@@ -101,7 +101,7 @@ func (l BoolSubscriber) toSubscriber() eventual2go.Subscriber {
 	return func(d eventual2go.Data) { l(d.(bool)) }
 }
 
-func (s *BoolStream) Listen(ss BoolSubscriber) *eventual2go.Subscription {
+func (s *BoolStream) Listen(ss BoolSubscriber) *eventual2go.Completer {
 	return s.Stream.Listen(ss.toSubscriber())
 }
 
@@ -144,9 +144,10 @@ func (s *BoolStream) FirstWhereNot(f ...BoolFilter) *BoolFuture {
 	return &BoolFuture{s.Stream.FirstWhereNot(toBoolFilterArray(f...)...)}
 }
 
-func (s *BoolStream) AsChan() (c chan bool) {
+func (s *BoolStream) AsChan() (c chan bool, stop *eventual2go.Completer) {
 	c = make(chan bool)
-	s.Listen(pipeToBoolChan(c)).Closed().Then(closeBoolChan(c))
+	stop = s.Listen(pipeToBoolChan(c))
+	stop.Future().Then(closeBoolChan(c))
 	return
 }
 

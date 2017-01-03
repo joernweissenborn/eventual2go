@@ -268,7 +268,7 @@ func (l {{.Name}}Subscriber) toSubscriber() eventual2go.Subscriber {
 	return func(d eventual2go.Data) { l(d.({{.TypeName}})) }
 }
 
-func (s *{{.Name}}Stream) Listen(ss {{.Name}}Subscriber) *eventual2go.Subscription {
+func (s *{{.Name}}Stream) Listen(ss {{.Name}}Subscriber) *eventual2go.Completer {
 	return s.Stream.Listen(ss.toSubscriber())
 }
 
@@ -311,9 +311,10 @@ func (s *{{.Name}}Stream) FirstWhereNot(f ...{{.Name}}Filter) *{{.Name}}Future {
 	return &{{.Name}}Future{s.Stream.FirstWhereNot(to{{.Name}}FilterArray(f...)...)}
 }
 
-func (s *{{.Name}}Stream) AsChan() (c chan {{.TypeName}}) {
+func (s *{{.Name}}Stream) AsChan() (c chan {{.TypeName}}, stop *eventual2go.Completer) {
 	c = make(chan {{.TypeName}})
-	s.Listen(pipeTo{{.Name}}Chan(c)).Closed().Then(close{{.Name}}Chan(c))
+	stop = s.Listen(pipeTo{{.Name}}Chan(c))
+	stop.Future().Then(close{{.Name}}Chan(c))
 	return
 }
 
