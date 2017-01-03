@@ -49,6 +49,25 @@ func (c *Completer) CompleteError(err error) {
 	c.f.completeError(err)
 }
 
+func (c *Completer) CompleteOnFuture(f *Future) {
+	f.Then(completeFuture(c))
+	f.Err(completeFutureError(c))
+}
+
+func completeFuture(c *Completer) CompletionHandler {
+	return func(d Data) Data {
+		c.Complete(d)
+		return nil
+	}
+}
+
+func completeFutureError(c *Completer) ErrorHandler {
+	return func(err error) (Data, error) {
+		c.CompleteError(err)
+		return nil, nil
+	}
+}
+
 func timeout(c *Completer, d time.Duration) {
 	time.Sleep(d)
 	if !c.Completed() {

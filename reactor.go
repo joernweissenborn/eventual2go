@@ -24,8 +24,9 @@ func NewReactor() (r *Reactor) {
 		shutdownCompleter: NewCompleter(),
 		eventRegister:     map[interface{}]Subscriber{},
 	}
-
-	go r.react(r.evtIn.Stream().AsChan())
+	evtC, stop := r.evtIn.Stream().AsChan()
+	stop.CompleteOnFuture(r.shutdownCompleter.Future())
+	go r.react(evtC)
 
 	return
 }
@@ -39,7 +40,6 @@ func (r *Reactor) Shutdown(d Data) {
 }
 
 func (r *Reactor) shutdown() {
-	r.evtIn.Close()
 	r.shutdownCompleter.Complete(nil)
 }
 
@@ -68,7 +68,7 @@ func (r *Reactor) React(classifer interface{}, handler Subscriber) {
 }
 
 func (r *Reactor) AddStream(classifer interface{}, s *Stream) {
-	s.Listen(r.createEventFromStream(classifer)).CloseOnFuture(r.shutdownCompleter.Future())
+	s.Listen(r.createEventFromStream(classifer)).CompleteOnFuture(r.shutdownCompleter.Future())
 }
 
 func (r *Reactor) createEventFromStream(classifer interface{}) Subscriber {
