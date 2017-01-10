@@ -113,8 +113,7 @@ func (r *Reactor) react(ec chan Event) {
 		r.Lock()
 		if h, f := r.eventRegister[evt.Classifier]; f {
 			h(evt.Data)
-		}
-		if evt.Classifier == (ShutdownEvent{}) {
+		} else if evt.Classifier == (ShutdownEvent{}) {
 			r.shutdown()
 		}
 		r.Unlock()
@@ -122,12 +121,16 @@ func (r *Reactor) react(ec chan Event) {
 }
 
 func (r *Reactor) CatchCtrlC() {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-	go r.waitForInterrupt(c)
+	go r.waitForCtrlC()
 }
 
-func (r *Reactor) waitForInterrupt(c chan os.Signal) {
+func (r *Reactor) waitForCtrlC() {
+	c := make(chan os.Signal, 1)
 	defer close(c)
-	r.Shutdown(<-c)
+	signal.Notify(c, os.Interrupt)
+	select {
+	case s := <-c:
+		r.Shutdown(s)
+	case <-r.shutdownCompleter.Future().AsChan():
+	}
 }
