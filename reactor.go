@@ -75,6 +75,19 @@ func (r *Reactor) React(classifer interface{}, handler Subscriber) {
 	r.eventRegister[classifer] = handler
 }
 
+func (r *Reactor) react(ec chan Event) {
+
+	for evt := range ec {
+		r.Lock()
+		if h, f := r.eventRegister[evt.Classifier]; f {
+			h(evt.Data)
+		} else if evt.Classifier == (ShutdownEvent{}) {
+			r.shutdown()
+		}
+		r.Unlock()
+	}
+}
+
 // AddStream subscribes to a Stream, firing an event with the given classifier for every new element in the stream.
 func (r *Reactor) AddStream(classifer interface{}, s *Stream) {
 	s.Listen(r.createEventFromStream(classifer)).CompleteOnFuture(r.shutdownCompleter.Future())
@@ -117,19 +130,6 @@ func (r *Reactor) createEventFromFutureError(classifer interface{}) ErrorHandler
 // CollectEvent register the given Collectors Add method as eventhandler for the given classifier.
 func (r *Reactor) CollectEvent(classifer interface{}, c *Collector) {
 	r.React(classifer, c.Add)
-}
-
-func (r *Reactor) react(ec chan Event) {
-
-	for evt := range ec {
-		r.Lock()
-		if h, f := r.eventRegister[evt.Classifier]; f {
-			h(evt.Data)
-		} else if evt.Classifier == (ShutdownEvent{}) {
-			r.shutdown()
-		}
-		r.Unlock()
-	}
 }
 
 // CatchCtrlC starts a goroutine, which initializes reactor shutdown when os.Interrupt is received.
