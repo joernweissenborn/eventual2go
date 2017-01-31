@@ -31,8 +31,8 @@ type BoolFuture struct {
 	*eventual2go.Future
 }
 
-func (f *BoolFuture) GetResult() bool {
-	return f.Future.GetResult().(bool)
+func (f *BoolFuture) Result() bool {
+	return f.Future.Result().(bool)
 }
 
 type BoolCompletionHandler func(bool) bool

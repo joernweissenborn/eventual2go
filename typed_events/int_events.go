@@ -31,8 +31,8 @@ type IntFuture struct {
 	*eventual2go.Future
 }
 
-func (f *IntFuture) GetResult() int {
-	return f.Future.GetResult().(int)
+func (f *IntFuture) Result() int {
+	return f.Future.Result().(int)
 }
 
 type IntCompletionHandler func(int) int

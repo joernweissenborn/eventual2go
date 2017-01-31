@@ -1,5 +1,6 @@
 package eventual2go
 
+// Message is a classifier for a message received event.
 type Message struct{}
 
 // ActorMessageStream is used to send messages to an actor.
@@ -21,8 +22,8 @@ func (ams ActorMessageStream) Send(data Data) {
 	ams.streamController.Add(data)
 }
 
-// Sendhutdown sends a shutdown signal to the actor. Messages send before the shutdown signal are guaranteed to be handled.
-func (ams ActorMessageStream) SendShutdown(data Data) {
+// Shutdown sends a shutdown signal to the actor. Messages send before the shutdown signal are guaranteed to be handled.
+func (ams ActorMessageStream) Shutdown(data Data) {
 	ams.shutdown.Complete(data)
 }
 

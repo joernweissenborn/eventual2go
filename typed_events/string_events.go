@@ -31,8 +31,8 @@ type StringFuture struct {
 	*eventual2go.Future
 }
 
-func (f *StringFuture) GetResult() string {
-	return f.Future.GetResult().(string)
+func (f *StringFuture) Result() string {
+	return f.Future.Result().(string)
 }
 
 type StringCompletionHandler func(string) string

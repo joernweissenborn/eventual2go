@@ -3,12 +3,13 @@ package eventual2go
 import (
 	"fmt"
 	"sync"
+	"time"
 )
 
 // Future is thread-safe struct that can be completed with arbitrary data or failed with an error. Handler functions can
 // be registered for both events and get invoked after completion..
 type Future struct {
-	m         *sync.Mutex
+	m         *sync.RWMutex
 	fcs       []futurecompleter
 	fces      []futurecompletererror
 	completed bool
@@ -19,7 +20,7 @@ type Future struct {
 // Creates a new future.
 func newFuture() (F *Future) {
 	F = &Future{
-		m:         new(sync.Mutex),
+		m:         new(sync.RWMutex),
 		fcs:       []futurecompleter{},
 		fces:      []futurecompletererror{},
 		completed: false,
@@ -37,15 +38,15 @@ func (f *Future) complete(d Data) {
 	}
 	f.result = d
 	for _, fc := range f.fcs {
-		go deliverData(fc, d)
+		go executeHandler(fc, d)
 	}
 	f.completed = true
 }
 
 // Completed returns the completion state.
 func (f *Future) Completed() bool {
-	f.m.Lock()
-	defer f.m.Unlock()
+	f.m.RLock()
+	defer f.m.RUnlock()
 	return f.completed
 }
 
@@ -64,7 +65,7 @@ func (f *Future) completeError(err error) {
 	f.completed = true
 }
 
-func deliverData(fc futurecompleter, d Data) {
+func executeHandler(fc futurecompleter, d Data) {
 	fc.f.complete(fc.cf(d))
 }
 
@@ -82,15 +83,16 @@ func deliverErr(fce futurecompletererror, e error) {
 // Then registers a completion handler. If the future is already complete, the handler gets executed immediately.
 // Returns a future that gets completed with result of the handler.
 func (f *Future) Then(ch CompletionHandler) (nf *Future) {
-	f.m.Lock()
-	defer f.m.Unlock()
 
 	nf = newFuture()
 	fc := futurecompleter{ch, nf}
+	f.m.Lock()
 	if f.completed && f.err == nil {
-		deliverData(fc, f.result)
+		f.m.Unlock()
+		executeHandler(fc, f.result)
 	} else if !f.completed {
 		f.fcs = append(f.fcs, fc)
+		f.m.Unlock()
 	}
 	return
 }
@@ -100,8 +102,20 @@ func (f *Future) WaitUntilComplete() {
 	<-f.AsChan()
 }
 
-// GetResult returns the result of the future, nil called before completion or after error completion.
-func (f *Future) GetResult() Data {
+// WaitUntilCompleteTimeout blocks until the future is complete or the timeout is reached.
+func (f *Future) WaitUntilTimeout(timeout time.Duration) (complete bool) {
+	if !f.Completed() {
+		select {
+		case <-f.AsChan():
+		case <-time.After(timeout):
+		}
+	}
+	complete = f.Completed()
+	return
+}
+
+// Result returns the result of the future, nil if called before completion or after error completion.
+func (f *Future) Result() Data {
 	return f.result
 }
 
@@ -111,14 +125,15 @@ func (f *Future) GetResult() Data {
 // if not nil.
 func (f *Future) Err(eh ErrorHandler) (nf *Future) {
 	f.m.Lock()
-	defer f.m.Unlock()
 
 	nf = newFuture()
 	fce := futurecompletererror{eh, nf}
 	if f.err != nil {
+		f.m.Unlock()
 		deliverErr(fce, f.err)
 	} else if !f.completed {
 		f.fces = append(f.fces, fce)
+		f.m.Unlock()
 	}
 	return
 }

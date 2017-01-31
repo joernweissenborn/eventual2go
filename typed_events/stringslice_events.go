@@ -31,8 +31,8 @@ type StringSliceFuture struct {
 	*eventual2go.Future
 }
 
-func (f *StringSliceFuture) GetResult() []string {
-	return f.Future.GetResult().([]string)
+func (f *StringSliceFuture) Result() []string {
+	return f.Future.Result().([]string)
 }
 
 type StringSliceCompletionHandler func([]string) []string

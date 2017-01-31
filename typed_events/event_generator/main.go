@@ -198,8 +198,8 @@ type {{.Name}}Future struct {
 	*eventual2go.Future
 }
 
-func (f *{{.Name}}Future) GetResult() {{.TypeName}} {
-	return f.Future.GetResult().({{.TypeName}})
+func (f *{{.Name}}Future) Result() {{.TypeName}} {
+	return f.Future.Result().({{.TypeName}})
 }
 
 type {{.Name}}CompletionHandler func({{.TypeName}}) {{.TypeName}}

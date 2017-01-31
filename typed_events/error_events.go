@@ -31,8 +31,8 @@ type ErrorFuture struct {
 	*eventual2go.Future
 }
 
-func (f *ErrorFuture) GetResult() error {
-	return f.Future.GetResult().(error)
+func (f *ErrorFuture) Result() error {
+	return f.Future.Result().(error)
 }
 
 type ErrorCompletionHandler func(error) error
