@@ -90,10 +90,11 @@ func (f *Future) Then(ch CompletionHandler) (nf *Future) {
 	if f.completed && f.err == nil {
 		f.m.Unlock()
 		executeHandler(fc, f.result)
+		return
 	} else if !f.completed {
 		f.fcs = append(f.fcs, fc)
-		f.m.Unlock()
 	}
+	f.m.Unlock()
 	return
 }
 
@@ -131,10 +132,11 @@ func (f *Future) Err(eh ErrorHandler) (nf *Future) {
 	if f.err != nil {
 		f.m.Unlock()
 		deliverErr(fce, f.err)
+		return
 	} else if !f.completed {
 		f.fces = append(f.fces, fce)
-		f.m.Unlock()
 	}
+	f.m.Unlock()
 	return
 }
 
