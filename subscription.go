@@ -11,6 +11,8 @@ type Subscription struct {
 	inC      chan Data
 	doC      chan Data
 	m        *sync.Mutex
+
+	next Future
 }
 
 // NewSubscription creates a new subscription.

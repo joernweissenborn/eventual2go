@@ -31,8 +31,8 @@ type StringSliceFuture struct {
 	*eventual2go.Future
 }
 
-func (f *StringSliceFuture) GetResult() []string {
-	return f.Future.GetResult().([]string)
+func (f *StringSliceFuture) Result() []string {
+	return f.Future.Result().([]string)
 }
 
 type StringSliceCompletionHandler func([]string) []string
@@ -101,7 +101,7 @@ func (l StringSliceSubscriber) toSubscriber() eventual2go.Subscriber {
 	return func(d eventual2go.Data) { l(d.([]string)) }
 }
 
-func (s *StringSliceStream) Listen(ss StringSliceSubscriber) *eventual2go.Subscription {
+func (s *StringSliceStream) Listen(ss StringSliceSubscriber) *eventual2go.Completer {
 	return s.Stream.Listen(ss.toSubscriber())
 }
 
@@ -144,9 +144,10 @@ func (s *StringSliceStream) FirstWhereNot(f ...StringSliceFilter) *StringSliceFu
 	return &StringSliceFuture{s.Stream.FirstWhereNot(toStringSliceFilterArray(f...)...)}
 }
 
-func (s *StringSliceStream) AsChan() (c chan []string) {
+func (s *StringSliceStream) AsChan() (c chan []string, stop *eventual2go.Completer) {
 	c = make(chan []string)
-	s.Listen(pipeToStringSliceChan(c)).Closed().Then(closeStringSliceChan(c))
+	stop = s.Listen(pipeToStringSliceChan(c))
+	stop.Future().Then(closeStringSliceChan(c))
 	return
 }
 

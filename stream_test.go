@@ -7,8 +7,7 @@ import (
 
 func TestStreamBasics(t *testing.T) {
 	sc := NewStreamController()
-	defer sc.Close()
-	c := sc.Stream().AsChan()
+	c, _ := sc.Stream().AsChan()
 	sc.Add("test")
 
 	select {
@@ -21,59 +20,34 @@ func TestStreamBasics(t *testing.T) {
 	}
 }
 
-func TestStreamClose(t *testing.T) {
-	sc := NewStreamController()
-	sc.Close()
-	if !sc.Closed().Completed() {
-		t.Error("stream didnt close")
-	}
-}
-
 func TestStreamCancelSub(t *testing.T) {
 	sc := NewStreamController()
 	a := false
-	ss := sc.Stream().Listen(func(d Data) {
+	stop := sc.Stream().Listen(func(d Data) {
 		a = true
 	})
-	ss.Close()
+	stop.Complete(nil)
 	sc.Add(0)
-	time.Sleep(1 * time.Millisecond)
 	if a {
 		t.Error("subscription didn't cancel")
-	}
-	if !ss.Closed().Completed() {
-		t.Error("subscription future didn't complete")
 	}
 
 	b := false
 	c := NewCompleter()
-	sc.Stream().Listen(func(Data) { b = true }).CloseOnFuture(c.Future())
+	sc.Stream().Listen(func(Data) { b = true }).CompleteOnFuture(c.Future())
 	c.Complete(0)
-	time.Sleep(1 * time.Millisecond)
-
 	sc.Add(0)
-	time.Sleep(1 * time.Millisecond)
 
 	if b {
 		t.Error("subscription didn't cancel")
-	}
-
-	ss = sc.Stream().Listen(func(d Data) {
-		a = true
-	})
-	sc.Close()
-	time.Sleep(1 * time.Millisecond)
-	if !ss.Closed().Completed() {
-		t.Error("subscription future didn't complete")
 	}
 
 }
 
 func TestStreamMultiSubscription(t *testing.T) {
 	sc := NewStreamController()
-	defer sc.Close()
-	c1 := sc.Stream().AsChan()
-	c2 := sc.Stream().AsChan()
+	c1, _ := sc.Stream().AsChan()
+	c2, _ := sc.Stream().AsChan()
 	sc.Add("test")
 	select {
 	case <-time.After(1 * time.Millisecond):
@@ -96,7 +70,6 @@ func TestStreamMultiSubscription(t *testing.T) {
 
 func TestStreamFirst(t *testing.T) {
 	sc := NewStreamController()
-	defer sc.Close()
 	c := sc.Stream().First().AsChan()
 
 	sc.Add("test")
@@ -112,8 +85,7 @@ func TestStreamFirst(t *testing.T) {
 
 func TestStreamFilter(t *testing.T) {
 	sc := NewStreamController()
-	defer sc.Close()
-	c := sc.Stream().Where(func(d Data) bool { return d.(int) != 2 }).AsChan()
+	c, _ := sc.Stream().Where(func(d Data) bool { return d.(int) != 2 }).AsChan()
 	sc.Add(1)
 	sc.Add(2)
 	sc.Add(2)
@@ -135,10 +107,9 @@ func TestStreamFilter(t *testing.T) {
 
 func TestStreamSplit(t *testing.T) {
 	sc := NewStreamController()
-	defer sc.Close()
 	y, n := sc.Stream().Split(func(d Data) bool { return d.(int) != 2 })
-	c1 := y.AsChan()
-	c2 := n.AsChan()
+	c1, _ := y.AsChan()
+	c2, _ := n.AsChan()
 	sc.Add(1)
 	sc.Add(2)
 	sc.Add(2)
@@ -169,8 +140,7 @@ func TestStreamSplit(t *testing.T) {
 
 func TestStreamTransformer(t *testing.T) {
 	sc := NewStreamController()
-	defer sc.Close()
-	c := sc.Stream().Transform(func(d Data) Data { return d.(int) * 2 }).AsChan()
+	c, _ := sc.Stream().Transform(func(d Data) Data { return d.(int) * 2 }).AsChan()
 	sc.Add(5)
 	select {
 	case <-time.After(1 * time.Millisecond):
@@ -185,8 +155,7 @@ func TestStreamTransformer(t *testing.T) {
 func TestJoinFuture(t *testing.T) {
 
 	sc := NewStreamController()
-	defer sc.Close()
-	c := sc.Stream().AsChan()
+	c, _ := sc.Stream().AsChan()
 	fc := NewCompleter()
 	sc.JoinFuture(fc.Future())
 	fc.Complete("test")

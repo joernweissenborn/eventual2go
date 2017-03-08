@@ -10,6 +10,9 @@ type ErrorHandler func(error) (Data, error)
 // A Subscriber gets invoked whenever data is added to the consumed stream.
 type Subscriber func(Data)
 
+// A Subscriber gets invoked whenever data is added to the consumed stream.
+type DeriveSubscriber func(*StreamController, Data)
+
 // A Transformer gets invoked when data is added to the consumed stream. The output gets added to the transformed
 // stream.
 type Transformer func(Data) Data

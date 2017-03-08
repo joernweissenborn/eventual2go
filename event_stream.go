@@ -34,7 +34,7 @@ func (l EventSuscriber) toSuscriber() Subscriber {
 	return func(d Data) { l(d.(Event)) }
 }
 
-func (s *EventStream) Listen(ss EventSuscriber) *Subscription {
+func (s *EventStream) Listen(ss EventSuscriber) (stop *Completer) {
 	return s.Stream.Listen(ss.toSuscriber())
 }
 
@@ -64,9 +64,10 @@ func (s *EventStream) FirstWhereNot(f EventFilter) *EventFuture {
 	return &EventFuture{s.Stream.FirstWhereNot(f.toFilter())}
 }
 
-func (s *EventStream) AsChan() (c chan Event) {
+func (s *EventStream) AsChan() (c chan Event, stop *Completer) {
 	c = make(chan Event)
-	s.Listen(pipeToEventChan(c)).Closed().Then(closeEventChan(c))
+	stop = s.Listen(pipeToEventChan(c))
+	stop.Future().Then(closeEventChan(c))
 	return
 }
 

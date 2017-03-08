@@ -31,8 +31,8 @@ type IntFuture struct {
 	*eventual2go.Future
 }
 
-func (f *IntFuture) GetResult() int {
-	return f.Future.GetResult().(int)
+func (f *IntFuture) Result() int {
+	return f.Future.Result().(int)
 }
 
 type IntCompletionHandler func(int) int
@@ -101,7 +101,7 @@ func (l IntSubscriber) toSubscriber() eventual2go.Subscriber {
 	return func(d eventual2go.Data) { l(d.(int)) }
 }
 
-func (s *IntStream) Listen(ss IntSubscriber) *eventual2go.Subscription {
+func (s *IntStream) Listen(ss IntSubscriber) *eventual2go.Completer {
 	return s.Stream.Listen(ss.toSubscriber())
 }
 
@@ -144,9 +144,10 @@ func (s *IntStream) FirstWhereNot(f ...IntFilter) *IntFuture {
 	return &IntFuture{s.Stream.FirstWhereNot(toIntFilterArray(f...)...)}
 }
 
-func (s *IntStream) AsChan() (c chan int) {
+func (s *IntStream) AsChan() (c chan int, stop *eventual2go.Completer) {
 	c = make(chan int)
-	s.Listen(pipeToIntChan(c)).Closed().Then(closeIntChan(c))
+	stop = s.Listen(pipeToIntChan(c))
+	stop.Future().Then(closeIntChan(c))
 	return
 }
 

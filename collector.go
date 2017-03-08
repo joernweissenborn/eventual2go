@@ -37,7 +37,7 @@ func (c *Collector) Add(d Data) {
 }
 
 func (c *Collector) AddStream(s *Stream) {
-	s.Listen(c.Add).CloseOnFuture(c.remove.Future())
+	s.Listen(c.Add).CompleteOnFuture(c.remove.Future())
 }
 
 func (c *Collector) AddFuture(f *Future) {

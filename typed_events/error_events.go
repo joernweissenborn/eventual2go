@@ -31,8 +31,8 @@ type ErrorFuture struct {
 	*eventual2go.Future
 }
 
-func (f *ErrorFuture) GetResult() error {
-	return f.Future.GetResult().(error)
+func (f *ErrorFuture) Result() error {
+	return f.Future.Result().(error)
 }
 
 type ErrorCompletionHandler func(error) error
@@ -101,7 +101,7 @@ func (l ErrorSubscriber) toSubscriber() eventual2go.Subscriber {
 	return func(d eventual2go.Data) { l(d.(error)) }
 }
 
-func (s *ErrorStream) Listen(ss ErrorSubscriber) *eventual2go.Subscription {
+func (s *ErrorStream) Listen(ss ErrorSubscriber) *eventual2go.Completer {
 	return s.Stream.Listen(ss.toSubscriber())
 }
 
@@ -144,9 +144,10 @@ func (s *ErrorStream) FirstWhereNot(f ...ErrorFilter) *ErrorFuture {
 	return &ErrorFuture{s.Stream.FirstWhereNot(toErrorFilterArray(f...)...)}
 }
 
-func (s *ErrorStream) AsChan() (c chan error) {
+func (s *ErrorStream) AsChan() (c chan error, stop *eventual2go.Completer) {
 	c = make(chan error)
-	s.Listen(pipeToErrorChan(c)).Closed().Then(closeErrorChan(c))
+	stop = s.Listen(pipeToErrorChan(c))
+	stop.Future().Then(closeErrorChan(c))
 	return
 }
 
