@@ -27,10 +27,7 @@ func NewReactor() (r *Reactor) {
 		shutdownCompleter: NewCompleter(),
 		eventRegister:     map[interface{}]Subscriber{},
 	}
-	evtC, stop := r.evtIn.Stream().AsChan()
-	stop.CompleteOnFuture(r.shutdownCompleter.Future())
-	go r.react(evtC)
-
+	r.shutdownCompleter = r.evtIn.Stream().Listen(r.react)
 	return
 }
 
@@ -75,16 +72,14 @@ func (r *Reactor) React(classifer interface{}, handler Subscriber) {
 	r.eventRegister[classifer] = handler
 }
 
-func (r *Reactor) react(ec chan Event) {
-
-	for evt := range ec {
-		r.Lock()
-		if h, f := r.eventRegister[evt.Classifier]; f {
-			h(evt.Data)
-		} else if evt.Classifier == (ShutdownEvent{}) {
-			r.shutdown()
-		}
-		r.Unlock()
+func (r *Reactor) react(evt Event) {
+	r.Lock()
+	defer r.Unlock()
+	if h, f := r.eventRegister[evt.Classifier]; f {
+		h(evt.Data)
+	}
+	if _, is := evt.Classifier.(ShutdownEvent); is {
+		r.shutdown()
 	}
 }
 
