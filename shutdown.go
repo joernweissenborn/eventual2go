@@ -1,51 +1,48 @@
 package eventual2go
 
+import "sync"
+
 type Shutdowner interface {
 	Shutdown(d Data) error
 }
 
 type Shutdown struct {
-	errCollector *Collector
-	initSd       *Completer
-	wg           *FutureWaitGroup
+	m      *sync.Mutex
+	errors []error
+	initSd *Completer
+	wg     *sync.WaitGroup
 }
 
 func NewShutdown() (sd *Shutdown) {
 	sd = &Shutdown{
-		errCollector: NewCollector(),
-		initSd:       NewCompleter(),
-		wg:           NewFutureWaitGroup(),
+		m:      &sync.Mutex{},
+		errors: []error{},
+		initSd: NewCompleter(),
+		wg:     &sync.WaitGroup{},
 	}
 	return
 }
 
 func (sd *Shutdown) Register(s Shutdowner) {
-	c := NewCompleter()
-
-	sd.initSd.Future().Then(doShutdown(c, s))
-	sd.wg.Add(c.Future())
-	sd.errCollector.AddFutureError(c.Future())
+	sd.initSd.Future().Then(sd.doShutdown(s))
+	sd.wg.Add(1)
 }
 
 func (sd *Shutdown) Do(d Data) (errs []error) {
-
 	sd.initSd.Complete(d)
-
 	sd.wg.Wait()
-
-	for !sd.errCollector.Empty() {
-		errs = append(errs, sd.errCollector.Get().(error))
-	}
+	errs = sd.errors
 	return
 }
 
-func doShutdown(c *Completer, s Shutdowner) CompletionHandler {
+func (sd *Shutdown) doShutdown(s Shutdowner) CompletionHandler {
 	return func(d Data) Data {
 		if err := s.Shutdown(d); err != nil {
-			c.CompleteError(err)
-		} else {
-			c.Complete(nil)
+			sd.m.Lock()
+			sd.errors = append(sd.errors, err)
+			sd.m.Unlock()
 		}
+		sd.wg.Done()
 		return nil
 	}
 }

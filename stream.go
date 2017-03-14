@@ -53,6 +53,8 @@ func listen(sr Subscriber, stop *Future) CompletionHandler {
 func (s *Stream) Derive(dsr DeriveSubscriber) (ds *Stream) {
 	sc := NewStreamController()
 	ds = sc.Stream()
+	s.m.Lock()
+	defer s.m.Unlock()
 	s.next.Then(listen(derive(sc, dsr), ds.close.Future()))
 	return
 }
