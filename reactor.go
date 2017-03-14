@@ -24,7 +24,6 @@ func NewReactor() (r *Reactor) {
 	r = &Reactor{
 		Mutex:             new(sync.Mutex),
 		evtIn:             NewEventStreamController(),
-		shutdownCompleter: NewCompleter(),
 		eventRegister:     map[interface{}]Subscriber{},
 	}
 	r.shutdownCompleter = r.evtIn.Stream().Listen(r.react)
@@ -46,30 +45,30 @@ func (r *Reactor) shutdown() {
 }
 
 // Fire fires an event, invoking asynchronly the Subscriber registered, if any. Events are guaranteed to be handled in the order of arrival.
-func (r *Reactor) Fire(classifer interface{}, data Data) {
-	r.evtIn.Add(Event{classifer, data})
+func (r *Reactor) Fire(classifier interface{}, data Data) {
+	r.evtIn.Add(Event{classifier, data})
 }
 
 // FireEvery fires the given event repeatedly. FireEvery can not be canceled and will run until the reactor is shut down.
-func (r *Reactor) FireEvery(classifer interface{}, data Data, interval time.Duration) {
-	go r.fireEvery(classifer, data, interval)
+func (r *Reactor) FireEvery(classifier interface{}, data Data, interval time.Duration) {
+	go r.fireEvery(classifier, data, interval)
 }
 
-func (r *Reactor) fireEvery(classifer interface{}, data Data, d time.Duration) {
+func (r *Reactor) fireEvery(classifier interface{}, data Data, d time.Duration) {
 	for {
 		time.Sleep(d)
 		if r.shutdownCompleter.Completed() {
 			return
 		}
-		r.evtIn.Add(Event{classifer, data})
+		r.evtIn.Add(Event{classifier, data})
 	}
 }
 
 // React registers a Subscriber as handler for a given event classier. Previously registered handlers for vlassifier will be overwritten!
-func (r *Reactor) React(classifer interface{}, handler Subscriber) {
+func (r *Reactor) React(classifier interface{}, handler Subscriber) {
 	r.Lock()
 	defer r.Unlock()
-	r.eventRegister[classifer] = handler
+	r.eventRegister[classifier] = handler
 }
 
 func (r *Reactor) react(evt Event) {
@@ -84,47 +83,47 @@ func (r *Reactor) react(evt Event) {
 }
 
 // AddStream subscribes to a Stream, firing an event with the given classifier for every new element in the stream.
-func (r *Reactor) AddStream(classifer interface{}, s *Stream) {
-	s.Listen(r.createEventFromStream(classifer)).CompleteOnFuture(r.shutdownCompleter.Future())
+func (r *Reactor) AddStream(classifier interface{}, s *Stream) {
+	s.Listen(r.createEventFromStream(classifier)).CompleteOnFuture(r.shutdownCompleter.Future())
 }
 
-func (r *Reactor) createEventFromStream(classifer interface{}) Subscriber {
+func (r *Reactor) createEventFromStream(classifier interface{}) Subscriber {
 	return func(d Data) {
-		r.evtIn.Add(Event{classifer, d})
+		r.evtIn.Add(Event{classifier, d})
 	}
 }
 
 // AddFuture adds a handler for  completion of the given Future which fires an event with the given classifier upon future completion.
-func (r *Reactor) AddFuture(classifer interface{}, f *Future) {
-	f.Then(r.createEventFromFuture(classifer))
+func (r *Reactor) AddFuture(classifier interface{}, f *Future) {
+	f.Then(r.createEventFromFuture(classifier))
 }
 
-func (r *Reactor) createEventFromFuture(classifer interface{}) CompletionHandler {
+func (r *Reactor) createEventFromFuture(classifier interface{}) CompletionHandler {
 	return func(d Data) Data {
 		if !r.shutdownCompleter.Completed() {
-			r.evtIn.Add(Event{classifer, d})
+			r.evtIn.Add(Event{classifier, d})
 		}
 		return nil
 	}
 }
 
 //AddFutureError acts the same as AddFuture, but registers a handler for the future error.
-func (r *Reactor) AddFutureError(classifer interface{}, f *Future) {
-	f.Err(r.createEventFromFutureError(classifer))
+func (r *Reactor) AddFutureError(classifier interface{}, f *Future) {
+	f.Err(r.createEventFromFutureError(classifier))
 }
 
-func (r *Reactor) createEventFromFutureError(classifer interface{}) ErrorHandler {
+func (r *Reactor) createEventFromFutureError(classifier interface{}) ErrorHandler {
 	return func(e error) (Data, error) {
 		if !r.shutdownCompleter.Completed() {
-			r.evtIn.Add(Event{classifer, e})
+			r.evtIn.Add(Event{classifier, e})
 		}
 		return nil, nil
 	}
 }
 
 // CollectEvent register the given Collectors Add method as eventhandler for the given classifier.
-func (r *Reactor) CollectEvent(classifer interface{}, c *Collector) {
-	r.React(classifer, c.Add)
+func (r *Reactor) CollectEvent(classifier interface{}, c *Collector) {
+	r.React(classifier, c.Add)
 }
 
 // CatchCtrlC starts a goroutine, which initializes reactor shutdown when os.Interrupt is received.

@@ -46,7 +46,7 @@ func SpawnActor(a Actor) (messages ActorMessageStream, err error) {
 	actor := NewReactor()
 	actor.React(Message{}, a.OnMessage)
 	actor.AddStream(Message{}, messages.streamController.Stream())
-	actor.AddFuture(Shutdown{}, messages.shutdown.Future())
+	actor.AddFuture(ShutdownEvent{}, messages.shutdown.Future())
 	actor.OnShutdown(a.Shutdown)
 
 	return
