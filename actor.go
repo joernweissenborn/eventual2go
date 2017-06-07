@@ -33,11 +33,16 @@ type Actor interface {
 	OnMessage(d Data)
 }
 
+// ShutdownActor is an actor with a Shutdown method, which is called upon actor shutdown.
+type ShutdownActor interface {
+	Actor
+	Shutdown(d Data)
+}
+
 // LoopActor is an actor with a loop method which is called repeatedly. Messages are handled in between loop repetitions.
 type LoopActor interface {
 	Actor
 	Loop()
-	Shutdown(d Data)
 }
 
 type loopEvent struct{}
@@ -64,7 +69,9 @@ func SpawnActor(a Actor) (messages ActorMessageStream, err error) {
 	actor.AddFuture(ShutdownEvent{}, messages.shutdown.Future())
 	if la, ok := a.(LoopActor); ok {
 		actor.React(loopEvent{}, loopHandler(actor, la))
-		actor.OnShutdown(la.Shutdown)
+	}
+	if s, ok := a.(ShutdownActor); ok {
+		actor.OnShutdown(s.Shutdown)
 	}
 
 	return
