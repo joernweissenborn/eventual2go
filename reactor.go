@@ -37,9 +37,7 @@ func (r *Reactor) OnShutdown(s Subscriber) {
 
 // Shutdown shuts down the reactor, cancelling all go routines and stream subscriptions.
 func (r *Reactor) Shutdown(d Data) {
-	if r.shutdownCompleter.Completed() {
-		r.Fire(ShutdownEvent{}, d)
-	}
+	r.Fire(ShutdownEvent{}, d)
 }
 
 func (r *Reactor) shutdown() {
@@ -48,7 +46,9 @@ func (r *Reactor) shutdown() {
 
 // Fire fires an event, invoking asynchronly the Subscriber registered, if any. Events are guaranteed to be handled in the order of arrival.
 func (r *Reactor) Fire(classifier interface{}, data Data) {
-	r.evtIn.Add(Event{classifier, data})
+	if !r.shutdownCompleter.Completed() {
+		r.evtIn.Add(Event{classifier, data})
+	}
 }
 
 // FireEvery fires the given event repeatedly. FireEvery can not be canceled and will run until the reactor is shut down.
