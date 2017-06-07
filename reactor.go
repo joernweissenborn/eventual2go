@@ -22,9 +22,9 @@ type Reactor struct {
 func NewReactor() (r *Reactor) {
 
 	r = &Reactor{
-		Mutex:             new(sync.Mutex),
-		evtIn:             NewEventStreamController(),
-		eventRegister:     map[interface{}]Subscriber{},
+		Mutex:         new(sync.Mutex),
+		evtIn:         NewEventStreamController(),
+		eventRegister: map[interface{}]Subscriber{},
 	}
 	r.shutdownCompleter = r.evtIn.Stream().Listen(r.react)
 	return
@@ -37,7 +37,9 @@ func (r *Reactor) OnShutdown(s Subscriber) {
 
 // Shutdown shuts down the reactor, cancelling all go routines and stream subscriptions.
 func (r *Reactor) Shutdown(d Data) {
-	r.Fire(ShutdownEvent{}, d)
+	if r.shutdownCompleter.Completed() {
+		r.Fire(ShutdownEvent{}, d)
+	}
 }
 
 func (r *Reactor) shutdown() {

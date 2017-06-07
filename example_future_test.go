@@ -11,7 +11,7 @@ import (
 // Demonstrates the basic usage of futures
 func ExampleFuture() {
 
-	// create the completers, one we will complete with error, the other normall.
+	// create the completers, one we will complete with error, the other normaly.
 	completerNor := eventual2go.NewCompleter()
 	completerErr := eventual2go.NewCompleter()
 
