@@ -31,7 +31,22 @@ func (ams ActorMessageStream) Shutdown(data Data) {
 type Actor interface {
 	Init() error
 	OnMessage(d Data)
+}
+
+// LoopActor is an actor with a loop method which is called repeatedly. Messages are handled in between loop repetitions.
+type LoopActor interface {
+	Actor
+	Loop()
 	Shutdown(d Data)
+}
+
+type loopEvent struct{}
+
+func loopHandler(r *Reactor, la LoopActor) Subscriber {
+	return func (d Data) {
+		la.Loop()
+		r.Fire(loopEvent{}, nil) // if the actor is should down alredy, Fire will do nothing
+	}
 }
 
 // SpawnActor creates an actor and returns a message stream to it.
@@ -47,7 +62,10 @@ func SpawnActor(a Actor) (messages ActorMessageStream, err error) {
 	actor.React(Message{}, a.OnMessage)
 	actor.AddStream(Message{}, messages.streamController.Stream())
 	actor.AddFuture(ShutdownEvent{}, messages.shutdown.Future())
-	actor.OnShutdown(a.Shutdown)
+	if la, ok := a.(LoopActor); ok {
+		actor.React(loopEvent{}, loopHandler(actor, la))
+		actor.OnShutdown(la.Shutdown)
+	}
 
 	return
 }
