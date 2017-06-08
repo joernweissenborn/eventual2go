@@ -40,11 +40,16 @@ func (r *Reactor) Shutdown(d Data) {
 	r.Fire(ShutdownEvent{}, d)
 }
 
+// ShutdownFuture returns a future which gets completed after the reactor shut down.
+func (r *Reactor) ShutdownFuture() *Future{
+	return r.shutdownCompleter.Future()
+}
+
 func (r *Reactor) shutdown() {
 	r.shutdownCompleter.Complete(nil)
 }
 
-// Fire fires an event, invoking asynchronly the Subscriber registered, if any. Events are guaranteed to be handled in the order of arrival.
+// Fire triggers an event, invoking asynchronly the registered subscriber, if any. Events are guaranteed to be handled in the order of arrival.
 func (r *Reactor) Fire(classifier interface{}, data Data) {
 	if !r.shutdownCompleter.Completed() {
 		r.evtIn.Add(Event{classifier, data})
@@ -66,7 +71,7 @@ func (r *Reactor) fireEvery(classifier interface{}, data Data, d time.Duration) 
 	}
 }
 
-// React registers a Subscriber as handler for a given event classier. Previously registered handlers for vlassifier will be overwritten!
+// React registers a Subscriber as handler for a given event classier. Previously registered handlers for for the given classifier will be overwritten!
 func (r *Reactor) React(classifier interface{}, handler Subscriber) {
 	r.Lock()
 	defer r.Unlock()
@@ -95,7 +100,7 @@ func (r *Reactor) createEventFromStream(classifier interface{}) Subscriber {
 	}
 }
 
-// AddFuture adds a handler for  completion of the given Future which fires an event with the given classifier upon future completion.
+// AddFuture creates an event with given classifier, which will be fired when the given future completes. The event will not be triggered on error comletion.
 func (r *Reactor) AddFuture(classifier interface{}, f *Future) {
 	f.Then(r.createEventFromFuture(classifier))
 }

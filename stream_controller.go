@@ -48,7 +48,7 @@ func (sc *StreamController) Join(source *Stream) {
 	stop.CompleteOnFuture(sc.stream.close.Future())
 }
 
-// JoinFuture joins a future completion event.
+// JoinFuture joins a future completion event. The result will be added to the stream.
 func (sc *StreamController) JoinFuture(f *Future) {
 	f.Then(addJoinedFuture(sc))
 }

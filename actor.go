@@ -7,12 +7,14 @@ type Message struct{}
 type ActorMessageStream struct {
 	streamController *StreamController
 	shutdown         *Completer
+	finalErr         *Future
 }
 
-func newActorMessageStream() (ams ActorMessageStream) {
+func newActorMessageStream(finalErr *Future) (ams ActorMessageStream) {
 	ams = ActorMessageStream{
 		streamController: NewStreamController(),
 		shutdown:         NewCompleter(),
+		finalErr:         finalErr,
 	}
 	return
 }
@@ -23,8 +25,10 @@ func (ams ActorMessageStream) Send(data Data) {
 }
 
 // Shutdown sends a shutdown signal to the actor. Messages send before the shutdown signal are guaranteed to be handled.
-func (ams ActorMessageStream) Shutdown(data Data) {
+func (ams ActorMessageStream) Shutdown(data Data) (err error) {
 	ams.shutdown.Complete(data)
+	err = (<-ams.finalErr.AsChan()).(error)
+	return
 }
 
 // Actor is a simple actor.
@@ -36,28 +40,40 @@ type Actor interface {
 // ShutdownActor is an actor with a Shutdown method, which is called upon actor shutdown.
 type ShutdownActor interface {
 	Actor
-	Shutdown(d Data)
+	Shutdown(Data) error
+}
+
+func shutdownHandler(finalErr *Completer, a Actor) Subscriber {
+	return func(d Data) {
+		var err error
+		if s, ok := a.(ShutdownActor); ok {
+			err = s.Shutdown(d)
+		}
+		finalErr.Complete(err)
+	}
 }
 
 // LoopActor is an actor with a loop method which is called repeatedly. Messages are handled in between loop repetitions.
 type LoopActor interface {
 	Actor
-	Loop()
+	Loop() (cont bool)
 }
 
 type loopEvent struct{}
 
 func loopHandler(r *Reactor, la LoopActor) Subscriber {
-	return func (d Data) {
-		la.Loop()
-		r.Fire(loopEvent{}, nil) // if the actor is should down alredy, Fire will do nothing
+	return func(d Data) {
+		if la.Loop() {
+			r.Fire(loopEvent{}, nil) // if the actor is should down alredy, Fire will do nothing
+		}
 	}
 }
 
 // SpawnActor creates an actor and returns a message stream to it.
 func SpawnActor(a Actor) (messages ActorMessageStream, err error) {
 
-	messages = newActorMessageStream()
+	finalErr := NewCompleter()
+	messages = newActorMessageStream(finalErr.Future())
 
 	if err = a.Init(); err != nil {
 		return
@@ -67,11 +83,10 @@ func SpawnActor(a Actor) (messages ActorMessageStream, err error) {
 	actor.React(Message{}, a.OnMessage)
 	actor.AddStream(Message{}, messages.streamController.Stream())
 	actor.AddFuture(ShutdownEvent{}, messages.shutdown.Future())
+	actor.OnShutdown(shutdownHandler(finalErr, a))
 	if la, ok := a.(LoopActor); ok {
 		actor.React(loopEvent{}, loopHandler(actor, la))
-	}
-	if s, ok := a.(ShutdownActor); ok {
-		actor.OnShutdown(s.Shutdown)
+		actor.Fire(loopEvent{}, nil)
 	}
 
 	return
