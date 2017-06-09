@@ -41,7 +41,7 @@ func (r *Reactor) Shutdown(d Data) {
 }
 
 // ShutdownFuture returns a future which gets completed after the reactor shut down.
-func (r *Reactor) ShutdownFuture() *Future{
+func (r *Reactor) ShutdownFuture() *Future {
 	return r.shutdownCompleter.Future()
 }
 
@@ -107,9 +107,7 @@ func (r *Reactor) AddFuture(classifier interface{}, f *Future) {
 
 func (r *Reactor) createEventFromFuture(classifier interface{}) CompletionHandler {
 	return func(d Data) Data {
-		if !r.shutdownCompleter.Completed() {
-			r.evtIn.Add(Event{classifier, d})
-		}
+		r.Fire(classifier, d)
 		return nil
 	}
 }
@@ -121,10 +119,19 @@ func (r *Reactor) AddFutureError(classifier interface{}, f *Future) {
 
 func (r *Reactor) createEventFromFutureError(classifier interface{}) ErrorHandler {
 	return func(e error) (Data, error) {
-		if !r.shutdownCompleter.Completed() {
-			r.evtIn.Add(Event{classifier, e})
-		}
+		r.Fire(classifier, e)
 		return nil, nil
+	}
+}
+
+//AddObservable fires an event with the given classifier whenever the observable is changed.
+func (r *Reactor) AddObservable(classifier interface{}, o *Observable) {
+	o.OnChange(r.createEventFromObservable(classifier))
+}
+
+func (r *Reactor) createEventFromObservable(classifier interface{}) Subscriber {
+	return func(d Data) {
+		r.Fire(classifier, d)
 	}
 }
 
