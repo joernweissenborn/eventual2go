@@ -26,6 +26,10 @@ func TestFutureBasicCompletion(t *testing.T) {
 	if !(<-c).(bool) {
 		t.Error("Completed with wrong args")
 	}
+
+	if !f.Result().(bool){
+		t.Error("Completed with wrong args")
+	}
 }
 
 func TestTimeoutCompletion(t *testing.T) {
@@ -52,7 +56,6 @@ func TestFutureChainCompletion(t *testing.T) {
 
 	cp.Complete(true)
 
-	//
 	if !f.Completed() {
 		t.Error("not completed")
 	}

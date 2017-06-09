@@ -21,6 +21,10 @@ func TestReactorBasic(t *testing.T) {
 	if rt.data.(string) != "HALLO" {
 		t.Error("Wrong Data")
 	}
+	r.Shutdown(nil)
+	if !r.ShutdownFuture().WaitUntilTimeout(1 * time.Millisecond) {
+		t.Error("Rector shutdown failed")
+	}
 }
 
 func TestReactorMultipleEvents(t *testing.T) {
