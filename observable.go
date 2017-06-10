@@ -50,3 +50,8 @@ func (o *Observable) onChange(value Data) {
 func (o *Observable) AsChan() (c chan Data, cancel *Completer) {
 	return o.change.Stream().AsChan()
 }
+
+// NextChange returns a Future which gets completed with the next change.
+func (o *Observable) NextChange() (f *Future) {
+	return o.change.Stream().First()
+}

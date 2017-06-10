@@ -25,8 +25,14 @@ func (s *Stream)updateNext(next *Future) {
 	s.next = next
 }
 
+// Close closes the Stream and its assigned StreamController.
 func (s *Stream) Close() {
 	s.close.Complete(nil)
+}
+
+// CloseOnFuture closes the Stream upon completion of Future.
+func (s *Stream) CloseOnFuture(f *Future) {
+	s.close.CompleteOnFuture(f)
 }
 
 // Listen registers a subscriber. Returns a Completer, which can be used to terminate the subcription.
@@ -49,7 +55,7 @@ func listen(sr Subscriber, stop *Future) CompletionHandler {
 	}
 }
 
-// Transform registers a Transformer function and returns the transformed stream.
+// Derive creates a derived stream from a DeriveSubscriber. Mainly used internally.
 func (s *Stream) Derive(dsr DeriveSubscriber) (ds *Stream) {
 	sc := NewStreamController()
 	ds = sc.Stream()
