@@ -140,7 +140,7 @@ func (f *Future) Err(eh ErrorHandler) (nf *Future) {
 	return
 }
 
-// AsChan returns a channel which will receive either the result or the error after completion of the future.
+// AsChan returns a channel which either will receive the result on completion or gets closed on error completion of the Future.
 func (f *Future) AsChan() chan Data {
 	c := make(chan Data, 1)
 	cmpl := func(d chan Data) CompletionHandler {
@@ -152,7 +152,6 @@ func (f *Future) AsChan() chan Data {
 	}
 	ecmpl := func(d chan Data) ErrorHandler {
 		return func(e error) (Data, error) {
-			d <- e
 			close(d)
 			return nil, nil
 		}
