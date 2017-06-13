@@ -40,6 +40,10 @@ func (c *Collector) AddStream(s *Stream) {
 	s.Listen(c.Add).CompleteOnFuture(c.remove.Future())
 }
 
+func (c *Collector) AddObservable(o *Observable) {
+	o.OnChange(c.Add)
+}
+
 func (c *Collector) AddFuture(f *Future) {
 	f.Then(c.collectFuture)
 }
