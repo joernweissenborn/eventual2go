@@ -46,6 +46,11 @@ func (o *Observable) onChange(value Data) {
 	o.value = value
 }
 
+// Stream returns a stream of change events.
+func (o *Observable) Stream() (stream *Stream) {
+	return o.change.Stream()
+}
+
 // AsChan returns a channel on which changes get send.
 func (o *Observable) AsChan() (c chan Data, cancel *Completer) {
 	return o.change.Stream().AsChan()

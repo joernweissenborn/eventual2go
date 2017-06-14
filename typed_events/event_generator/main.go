@@ -295,6 +295,10 @@ func (s *{{.Name}}Stream) WhereNot(f ...{{.Name}}Filter) *{{.Name}}Stream {
 	return &{{.Name}}Stream{s.Stream.WhereNot(to{{.Name}}FilterArray(f...)...)}
 }
 
+func (s *{{.Name}}Stream) TransformWhere(t eventual2go.Transformer, f ...{{.Name}}Filter) *eventual2go.Stream {
+	return s.Stream.TransformWhere(t, to{{.Name}}FilterArray(f...)...)
+}
+
 func (s *{{.Name}}Stream) Split(f {{.Name}}Filter) (*{{.Name}}Stream, *{{.Name}}Stream)  {
 	return s.Where(f), s.WhereNot(f)
 }

@@ -30,6 +30,11 @@ func (s *Stream) Close() {
 	s.close.Complete(nil)
 }
 
+// Closed returns a Future which completes upon closing of the Stream.
+func (s *Stream) Closed() (f *Future){
+	return s.close.Future()
+}
+
 // CloseOnFuture closes the Stream upon completion of Future.
 func (s *Stream) CloseOnFuture(f *Future) {
 	s.close.CompleteOnFuture(f)
@@ -100,6 +105,13 @@ func filter(f []Filter) DeriveSubscriber {
 	}
 }
 
+// TransformWhere transforms only filtered elements.
+func (s *Stream) TransformWhere(t Transformer, f ...Filter) (tws *Stream) {
+	fs := s.Where(f...)
+	tws = fs.Transform(t)
+	fs.CloseOnFuture(tws.Closed())
+	return
+}
 // WhereNot registers a Filter function and returns the filtered stream. Elements will be added if the Filter returns FALSE.
 func (s *Stream) WhereNot(f ...Filter) (fs *Stream) {
 	fs = s.Derive(filterNot(f))

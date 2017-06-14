@@ -128,6 +128,10 @@ func (s *ErrorStream) WhereNot(f ...ErrorFilter) *ErrorStream {
 	return &ErrorStream{s.Stream.WhereNot(toErrorFilterArray(f...)...)}
 }
 
+func (s *ErrorStream) TransformWhere(t eventual2go.Transformer, f ...ErrorFilter) *eventual2go.Stream {
+	return s.Stream.TransformWhere(t, toErrorFilterArray(f...)...)
+}
+
 func (s *ErrorStream) Split(f ErrorFilter) (*ErrorStream, *ErrorStream)  {
 	return s.Where(f), s.WhereNot(f)
 }

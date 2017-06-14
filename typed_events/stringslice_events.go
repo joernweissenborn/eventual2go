@@ -128,6 +128,10 @@ func (s *StringSliceStream) WhereNot(f ...StringSliceFilter) *StringSliceStream 
 	return &StringSliceStream{s.Stream.WhereNot(toStringSliceFilterArray(f...)...)}
 }
 
+func (s *StringSliceStream) TransformWhere(t eventual2go.Transformer, f ...StringSliceFilter) *eventual2go.Stream {
+	return s.Stream.TransformWhere(t, toStringSliceFilterArray(f...)...)
+}
+
 func (s *StringSliceStream) Split(f StringSliceFilter) (*StringSliceStream, *StringSliceStream)  {
 	return s.Where(f), s.WhereNot(f)
 }

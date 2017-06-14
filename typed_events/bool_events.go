@@ -128,6 +128,10 @@ func (s *BoolStream) WhereNot(f ...BoolFilter) *BoolStream {
 	return &BoolStream{s.Stream.WhereNot(toBoolFilterArray(f...)...)}
 }
 
+func (s *BoolStream) TransformWhere(t eventual2go.Transformer, f ...BoolFilter) *eventual2go.Stream {
+	return s.Stream.TransformWhere(t, toBoolFilterArray(f...)...)
+}
+
 func (s *BoolStream) Split(f BoolFilter) (*BoolStream, *BoolStream)  {
 	return s.Where(f), s.WhereNot(f)
 }
