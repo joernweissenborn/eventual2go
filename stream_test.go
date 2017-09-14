@@ -1,6 +1,7 @@
 package eventual2go
 
 import (
+	"sync"
 	"testing"
 	"time"
 )
@@ -33,11 +34,15 @@ func TestStreamCancelSub(t *testing.T) {
 	}
 
 	b := false
-	c := NewCompleter()
-	sc.Stream().Listen(func(Data) { b = true }).CompleteOnFuture(c.Future())
+	m := &sync.Mutex{} //protect datarace
+	c := sc.Stream().Listen(func(Data) {
+		b = true
+	})
 	c.Complete(0)
 	sc.Add(0)
 
+	m.Lock()
+	defer m.Unlock()
 	if b {
 		t.Error("subscription didn't cancel")
 	}
