@@ -105,6 +105,10 @@ func (s *StringStream) Listen(ss StringSubscriber) *eventual2go.Completer {
 	return s.Stream.Listen(ss.toSubscriber())
 }
 
+func (s *StringStream) ListenNonBlocking(ss StringSubscriber) *eventual2go.Completer {
+	return s.Stream.ListenNonBlocking(ss.toSubscriber())
+}
+
 type StringFilter func(string) bool
 
 func (f StringFilter) toFilter() eventual2go.Filter {

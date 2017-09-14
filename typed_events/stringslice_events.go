@@ -105,6 +105,10 @@ func (s *StringSliceStream) Listen(ss StringSliceSubscriber) *eventual2go.Comple
 	return s.Stream.Listen(ss.toSubscriber())
 }
 
+func (s *StringSliceStream) ListenNonBlocking(ss StringSliceSubscriber) *eventual2go.Completer {
+	return s.Stream.ListenNonBlocking(ss.toSubscriber())
+}
+
 type StringSliceFilter func([]string) bool
 
 func (f StringSliceFilter) toFilter() eventual2go.Filter {

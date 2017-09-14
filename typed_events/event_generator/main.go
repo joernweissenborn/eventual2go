@@ -272,6 +272,10 @@ func (s *{{.Name}}Stream) Listen(ss {{.Name}}Subscriber) *eventual2go.Completer 
 	return s.Stream.Listen(ss.toSubscriber())
 }
 
+func (s *{{.Name}}Stream) ListenNonBlocking(ss {{.Name}}Subscriber) *eventual2go.Completer {
+	return s.Stream.ListenNonBlocking(ss.toSubscriber())
+}
+
 type {{.Name}}Filter func({{.TypeName}}) bool
 
 func (f {{.Name}}Filter) toFilter() eventual2go.Filter {

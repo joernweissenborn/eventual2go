@@ -1,6 +1,8 @@
 package eventual2go
 
-import "sync"
+import (
+	"sync"
+)
 
 // A Stream can be consumed or new streams be derived by registering handler functions.
 type Stream struct {
@@ -19,7 +21,7 @@ func newStream(next *Future) (s *Stream) {
 	return
 }
 
-func (s *Stream)updateNext(next *Future) {
+func (s *Stream) updateNext(next *Future) {
 	s.m.Lock()
 	defer s.m.Unlock()
 	s.next = next
@@ -31,7 +33,7 @@ func (s *Stream) Close() {
 }
 
 // Closed returns a Future which completes upon closing of the Stream.
-func (s *Stream) Closed() (f *Future){
+func (s *Stream) Closed() (f *Future) {
 	return s.close.Future()
 }
 
@@ -45,16 +47,29 @@ func (s *Stream) Listen(sr Subscriber) (stop *Completer) {
 	stop = NewCompleter()
 	s.m.Lock()
 	defer s.m.Unlock()
-	s.next.Then(listen(sr, stop.Future()))
+	s.next.Then(listen(sr, stop.Future(), true))
 	return
 }
 
-func listen(sr Subscriber, stop *Future) CompletionHandler {
+// ListenNonBlocking is the same as Listen, but the subscriber is not blocking the subcription.
+func (s *Stream) ListenNonBlocking(sr Subscriber) (stop *Completer) {
+	stop = NewCompleter()
+	s.m.Lock()
+	defer s.m.Unlock()
+	s.next.Then(listen(sr, stop.Future(), false))
+	return
+}
+
+func listen(sr Subscriber, stop *Future, block bool) CompletionHandler {
 	return func(d Data) Data {
 		if !stop.Completed() {
 			evt := d.(*streamEvent)
-			sr(evt.data)
-			evt.next.Then(listen(sr, stop))
+			if block {
+				sr(evt.data)
+			} else {
+				go sr(evt.data)
+			}
+			evt.next.Then(listen(sr, stop, block))
 		}
 		return nil
 	}
@@ -66,7 +81,7 @@ func (s *Stream) Derive(dsr DeriveSubscriber) (ds *Stream) {
 	ds = sc.Stream()
 	s.m.Lock()
 	defer s.m.Unlock()
-	s.next.Then(listen(derive(sc, dsr), ds.close.Future()))
+	s.next.Then(listen(derive(sc, dsr), ds.close.Future(), true))
 	return
 }
 
@@ -112,6 +127,7 @@ func (s *Stream) TransformWhere(t Transformer, f ...Filter) (tws *Stream) {
 	fs.CloseOnFuture(tws.Closed())
 	return
 }
+
 // WhereNot registers a Filter function and returns the filtered stream. Elements will be added if the Filter returns FALSE.
 func (s *Stream) WhereNot(f ...Filter) (fs *Stream) {
 	fs = s.Derive(filterNot(f))

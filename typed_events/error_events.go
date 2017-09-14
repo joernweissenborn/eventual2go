@@ -105,6 +105,10 @@ func (s *ErrorStream) Listen(ss ErrorSubscriber) *eventual2go.Completer {
 	return s.Stream.Listen(ss.toSubscriber())
 }
 
+func (s *ErrorStream) ListenNonBlocking(ss ErrorSubscriber) *eventual2go.Completer {
+	return s.Stream.ListenNonBlocking(ss.toSubscriber())
+}
+
 type ErrorFilter func(error) bool
 
 func (f ErrorFilter) toFilter() eventual2go.Filter {

@@ -105,6 +105,10 @@ func (s *BoolStream) Listen(ss BoolSubscriber) *eventual2go.Completer {
 	return s.Stream.Listen(ss.toSubscriber())
 }
 
+func (s *BoolStream) ListenNonBlocking(ss BoolSubscriber) *eventual2go.Completer {
+	return s.Stream.ListenNonBlocking(ss.toSubscriber())
+}
+
 type BoolFilter func(bool) bool
 
 func (f BoolFilter) toFilter() eventual2go.Filter {
