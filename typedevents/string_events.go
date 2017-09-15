@@ -5,7 +5,7 @@
  * DO NOT EDIT
  */
 
-package typed_events
+package typedevents
 
 import "github.com/joernweissenborn/eventual2go"
 
@@ -198,4 +198,33 @@ func (c *StringCollector) Get() string {
 
 func (c *StringCollector) Preview() string {
 	return c.Collector.Preview().(string)
+}
+
+type StringObservable struct {
+	*eventual2go.Observable
+}
+
+func (o *StringObservable) Value() string {
+	return o.Observable.Value().(string)
+}
+
+func (o *StringObservable) Change(value string) {
+	o.Observable.Change(value)
+}
+
+func (o *StringObservable) OnChange(s BoolSubscriber) (cancel *eventual2go.Completer) {
+	return o.OnChange(s)
+}
+
+func (o *StringObservable) Stream() (*StringStream) {
+	return &StringStream{o.Observable.Stream()}
+}
+
+
+func (o *StringObservable) AsChan() (c chan string, cancel *eventual2go.Completer) {
+	return o.Stream().AsChan()
+}
+
+func (o *StringObservable) NextChange() (f *StringFuture) {
+	return o.Stream().First()
 }
