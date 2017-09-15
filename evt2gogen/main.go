@@ -366,4 +366,33 @@ func (c *{{.Name}}Collector) Get() {{.TypeName}} {
 func (c *{{.Name}}Collector) Preview() {{.TypeName}} {
 	return c.Collector.Preview().({{.TypeName}})
 }
+
+type {{.Name}}Observable struct {
+	*eventual2go.Observable
+}
+
+func (o *{{.Name}}Observable) Value() {{.TypeName}} {
+	return o.Observable.Value().({{.TypeName}})
+}
+
+func (o *{{.Name}}Observable) Change(value {{.TypeName}}) {
+	o.Observable.Change(value)
+}
+
+func (o *{{.Name}}Observable) OnChange(s BoolSubscriber) (cancel *eventual2go.Completer) {
+	return o.OnChange(s)
+}
+
+func (o *{{.Name}}Observable) Stream() (*{{.Name}}Stream) {
+	return &{{.Name}}Stream{o.Observable.Stream()}
+}
+
+
+func (o *{{.Name}}Observable) AsChan() (c chan {{.TypeName}}, cancel *eventual2go.Completer) {
+	return o.Stream().AsChan()
+}
+
+func (o *{{.Name}}Observable) NextChange() (f *{{.Name}}Future) {
+	return o.Stream().First()
+}
 `
