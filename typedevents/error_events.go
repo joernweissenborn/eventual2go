@@ -204,20 +204,20 @@ type ErrorObservable struct {
 	*eventual2go.Observable
 }
 
-func (o *ErrorObservable) Value() error {
-	return o.Observable.Value().(error)
-}
-
 func NewErrorObservable (value error) (o *ErrorObservable) {
 	return &ErrorObservable{eventual2go.NewObservable(value)}
+}
+
+func (o *ErrorObservable) Value() error {
+	return o.Observable.Value().(error)
 }
 
 func (o *ErrorObservable) Change(value error) {
 	o.Observable.Change(value)
 }
 
-func (o *ErrorObservable) OnChange(s BoolSubscriber) (cancel *eventual2go.Completer) {
-	return o.OnChange(s)
+func (o *ErrorObservable) OnChange(s ErrorSubscriber) (cancel *eventual2go.Completer) {
+	return o.Observable.OnChange(s.toSubscriber())
 }
 
 func (o *ErrorObservable) Stream() (*ErrorStream) {

@@ -204,20 +204,20 @@ type IntObservable struct {
 	*eventual2go.Observable
 }
 
-func (o *IntObservable) Value() int {
-	return o.Observable.Value().(int)
-}
-
 func NewIntObservable (value int) (o *IntObservable) {
 	return &IntObservable{eventual2go.NewObservable(value)}
+}
+
+func (o *IntObservable) Value() int {
+	return o.Observable.Value().(int)
 }
 
 func (o *IntObservable) Change(value int) {
 	o.Observable.Change(value)
 }
 
-func (o *IntObservable) OnChange(s BoolSubscriber) (cancel *eventual2go.Completer) {
-	return o.OnChange(s)
+func (o *IntObservable) OnChange(s IntSubscriber) (cancel *eventual2go.Completer) {
+	return o.Observable.OnChange(s.toSubscriber())
 }
 
 func (o *IntObservable) Stream() (*IntStream) {

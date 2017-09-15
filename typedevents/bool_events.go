@@ -204,12 +204,12 @@ type BoolObservable struct {
 	*eventual2go.Observable
 }
 
-func (o *BoolObservable) Value() bool {
-	return o.Observable.Value().(bool)
-}
-
 func NewBoolObservable (value bool) (o *BoolObservable) {
 	return &BoolObservable{eventual2go.NewObservable(value)}
+}
+
+func (o *BoolObservable) Value() bool {
+	return o.Observable.Value().(bool)
 }
 
 func (o *BoolObservable) Change(value bool) {
@@ -217,7 +217,7 @@ func (o *BoolObservable) Change(value bool) {
 }
 
 func (o *BoolObservable) OnChange(s BoolSubscriber) (cancel *eventual2go.Completer) {
-	return o.OnChange(s)
+	return o.Observable.OnChange(s.toSubscriber())
 }
 
 func (o *BoolObservable) Stream() (*BoolStream) {

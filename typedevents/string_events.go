@@ -204,20 +204,20 @@ type StringObservable struct {
 	*eventual2go.Observable
 }
 
-func (o *StringObservable) Value() string {
-	return o.Observable.Value().(string)
-}
-
 func NewStringObservable (value string) (o *StringObservable) {
 	return &StringObservable{eventual2go.NewObservable(value)}
+}
+
+func (o *StringObservable) Value() string {
+	return o.Observable.Value().(string)
 }
 
 func (o *StringObservable) Change(value string) {
 	o.Observable.Change(value)
 }
 
-func (o *StringObservable) OnChange(s BoolSubscriber) (cancel *eventual2go.Completer) {
-	return o.OnChange(s)
+func (o *StringObservable) OnChange(s StringSubscriber) (cancel *eventual2go.Completer) {
+	return o.Observable.OnChange(s.toSubscriber())
 }
 
 func (o *StringObservable) Stream() (*StringStream) {

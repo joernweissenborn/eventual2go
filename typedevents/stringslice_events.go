@@ -204,20 +204,20 @@ type StringSliceObservable struct {
 	*eventual2go.Observable
 }
 
-func (o *StringSliceObservable) Value() []string {
-	return o.Observable.Value().([]string)
-}
-
 func NewStringSliceObservable (value []string) (o *StringSliceObservable) {
 	return &StringSliceObservable{eventual2go.NewObservable(value)}
+}
+
+func (o *StringSliceObservable) Value() []string {
+	return o.Observable.Value().([]string)
 }
 
 func (o *StringSliceObservable) Change(value []string) {
 	o.Observable.Change(value)
 }
 
-func (o *StringSliceObservable) OnChange(s BoolSubscriber) (cancel *eventual2go.Completer) {
-	return o.OnChange(s)
+func (o *StringSliceObservable) OnChange(s StringSliceSubscriber) (cancel *eventual2go.Completer) {
+	return o.Observable.OnChange(s.toSubscriber())
 }
 
 func (o *StringSliceObservable) Stream() (*StringSliceStream) {
