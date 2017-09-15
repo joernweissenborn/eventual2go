@@ -208,6 +208,10 @@ func (o *IntObservable) Value() int {
 	return o.Observable.Value().(int)
 }
 
+func NewIntObservable (value int) (o *IntObservable) {
+	return &IntObservable{eventual2go.NewObservable(value)}
+}
+
 func (o *IntObservable) Change(value int) {
 	o.Observable.Change(value)
 }

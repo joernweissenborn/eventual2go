@@ -208,6 +208,10 @@ func (o *StringSliceObservable) Value() []string {
 	return o.Observable.Value().([]string)
 }
 
+func NewStringSliceObservable (value []string) (o *StringSliceObservable) {
+	return &StringSliceObservable{eventual2go.NewObservable(value)}
+}
+
 func (o *StringSliceObservable) Change(value []string) {
 	o.Observable.Change(value)
 }

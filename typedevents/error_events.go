@@ -208,6 +208,10 @@ func (o *ErrorObservable) Value() error {
 	return o.Observable.Value().(error)
 }
 
+func NewErrorObservable (value error) (o *ErrorObservable) {
+	return &ErrorObservable{eventual2go.NewObservable(value)}
+}
+
 func (o *ErrorObservable) Change(value error) {
 	o.Observable.Change(value)
 }

@@ -208,6 +208,10 @@ func (o *BoolObservable) Value() bool {
 	return o.Observable.Value().(bool)
 }
 
+func NewBoolObservable (value bool) (o *BoolObservable) {
+	return &BoolObservable{eventual2go.NewObservable(value)}
+}
+
 func (o *BoolObservable) Change(value bool) {
 	o.Observable.Change(value)
 }
