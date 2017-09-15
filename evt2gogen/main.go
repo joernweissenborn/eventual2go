@@ -375,10 +375,13 @@ func (o *{{.Name}}Observable) Value() {{.TypeName}} {
 	return o.Observable.Value().({{.TypeName}})
 }
 
+<<<<<<< HEAD:evt2gogen/main.go
 func New{{.Name}}Observable (value {{.TypeName}}) (o *{{.Name}}Observable) {
 	return &{{.Name}}Observable{eventual2go.NewObservable(value)}
 }
 
+=======
+>>>>>>> 13abacc49f2ac240f8a8dca3d10a0140f9878cec:evt2gogen/main.go
 func (o *{{.Name}}Observable) Change(value {{.TypeName}}) {
 	o.Observable.Change(value)
 }
