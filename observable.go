@@ -60,3 +60,16 @@ func (o *Observable) AsChan() (c chan Data, cancel *Completer) {
 func (o *Observable) NextChange() (f *Future) {
 	return o.change.Stream().First()
 }
+
+// Derive returns a new Observable which value will be set by transform function everytime the source gets updated.
+func (o *Observable) Derive(t Transformer) (do *Observable, cancel *Completer) {
+	do = NewObservable(t(o.Value()))
+	cancel = o.OnChange(do.derive(t))
+	return
+}
+
+func (o *Observable) derive(t Transformer) Subscriber {
+	return func(d Data) {
+		o.Change(t(d))
+	}
+}
