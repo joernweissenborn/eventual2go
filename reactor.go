@@ -56,6 +56,19 @@ func (r *Reactor) Fire(classifier interface{}, data Data) {
 	}
 }
 
+// FireIn fires the given event after the given duration. FireIn can not be canceled.
+func (r *Reactor) FireIn(classifier interface{}, data Data, duration time.Duration) {
+	go r.fireIn(classifier, data, duration)
+}
+
+func (r *Reactor) fireIn(classifier interface{}, data Data, d time.Duration) {
+	time.Sleep(d)
+	if r.shutdownCompleter.Completed() {
+		return
+	}
+	r.evtIn.Add(Event{classifier, data})
+}
+
 // FireEvery fires the given event repeatedly. FireEvery can not be canceled and will run until the reactor is shut down.
 func (r *Reactor) FireEvery(classifier interface{}, data Data, interval time.Duration) {
 	go r.fireEvery(classifier, data, interval)
