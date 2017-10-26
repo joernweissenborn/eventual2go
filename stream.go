@@ -103,6 +103,20 @@ func transform(t Transformer) DeriveSubscriber {
 	}
 }
 
+// TransformerConditional registers a TransformerConditional function and returns the transformed stream.
+func (s *Stream) TransformConditional(t TransformerConditional) (ts *Stream) {
+	ts = s.Derive(transformConditional(t))
+	return
+}
+
+func transformConditional(t TransformerConditional) DeriveSubscriber {
+	return func(sc *StreamController, d Data) {
+		if transformed, ok := t(d); ok {
+			sc.Add(transformed)
+		}
+	}
+}
+
 // Where registers a Filter function and returns the filtered stream. Elements will be added if the Filter returns TRUE.
 func (s *Stream) Where(f ...Filter) (fs *Stream) {
 	fs = s.Derive(filter(f))

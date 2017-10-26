@@ -10,12 +10,15 @@ type ErrorHandler func(error) (Data, error)
 // A Subscriber gets invoked whenever data is added to the consumed stream.
 type Subscriber func(Data)
 
-// A Subscriber gets invoked whenever data is added to the consumed stream.
+// A DeriveSubscriber gets invoked every time data is added on the source stream and is responsible for adding the (transformed) data on the sink stream controller.
 type DeriveSubscriber func(*StreamController, Data)
 
 // A Transformer gets invoked when data is added to the consumed stream. The output gets added to the transformed
 // stream.
 type Transformer func(Data) Data
+
+// A TransformerConditional is like a Transformer, but can filter the data.
+type TransformerConditional func(Data) (Data, bool)
 
 // A Filter gets invoked when data is added to the consumed stream. The data is added to filtered stream conditionally,
 // depending the Filter got registered with Where or WhereNot.
