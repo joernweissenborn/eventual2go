@@ -103,7 +103,7 @@ func transform(t Transformer) DeriveSubscriber {
 	}
 }
 
-// TransformerConditional registers a TransformerConditional function and returns the transformed stream.
+// TransformConditional registers a TransformerConditional function and returns the transformed stream.
 func (s *Stream) TransformConditional(t TransformerConditional) (ts *Stream) {
 	ts = s.Derive(transformConditional(t))
 	return
@@ -163,6 +163,8 @@ func filterNot(f []Filter) DeriveSubscriber {
 func (s *Stream) First() (f *Future) {
 	c := NewCompleter()
 	f = c.Future()
+	s.m.Lock()
+	defer s.m.Unlock()
 	s.next.Then(first(c))
 	return
 }
