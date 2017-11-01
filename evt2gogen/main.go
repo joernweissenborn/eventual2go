@@ -15,14 +15,15 @@ import (
 )
 
 //flag vars
-
-var pkgName string
-var typeNames []string
-var names []string
-var export bool
-var verbose bool
-var print bool
-var outputFile string
+var (
+	pkgName    string
+	typeNames  []string
+	names      []string
+	export     bool
+	verbose    bool
+	print      bool
+	outputFile string
+)
 
 func main() {
 
@@ -83,7 +84,7 @@ func run(c *cli.Context) {
 	if pkgName == "" {
 		cwd, err := os.Getwd()
 		if err != nil {
-			log.Fatalf("error retrieving pkgName from working dir", err)
+			log.Fatal("error retrieving pkgName from working dir:", err)
 		}
 		pkgName = filepath.Base(cwd)
 	}
@@ -132,12 +133,12 @@ func run(c *cli.Context) {
 		outputFile = strings.ToLower(outputFile)
 		path, err := filepath.Abs(outputFile)
 		if err != nil {
-			logger.Fatalf("error creating file", err)
+			logger.Fatal("error creating file:", err)
 		}
 
 		err = ioutil.WriteFile(path, out.Bytes(), os.ModePerm)
 		if err != nil {
-			logger.Fatalf("error creating file", err)
+			logger.Fatal("error creating file:", err)
 		}
 
 	}
@@ -162,4 +163,3 @@ func generateType(out io.Writer, typeName, name string) {
 
 	t.Execute(out, tname)
 }
-
