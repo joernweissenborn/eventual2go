@@ -1,77 +1,77 @@
 package eventual2go
 
-type EventStreamController struct {
+type eventStreamController struct {
 	*StreamController
 }
 
-func NewEventStreamController() *EventStreamController {
-	return &EventStreamController{NewStreamController()}
+func newEventStreamController() *eventStreamController {
+	return &eventStreamController{NewStreamController()}
 }
 
-func (sc *EventStreamController) Add(d Event) {
+func (sc *eventStreamController) Add(d Event) {
 	sc.StreamController.Add(d)
 }
 
-func (sc *EventStreamController) Join(s *EventStream) {
+func (sc *eventStreamController) Join(s *eventStream) {
 	sc.StreamController.Join(s.Stream)
 }
 
-func (sc *EventStreamController) JoinFuture(f *EventFuture) {
+func (sc *eventStreamController) JoinFuture(f *eventFuture) {
 	sc.StreamController.JoinFuture(f.Future)
 }
 
-func (sc *EventStreamController) Stream() *EventStream {
-	return &EventStream{sc.StreamController.Stream()}
+func (sc *eventStreamController) Stream() *eventStream {
+	return &eventStream{sc.StreamController.Stream()}
 }
 
-type EventStream struct {
+type eventStream struct {
 	*Stream
 }
 
-type EventSuscriber func(Event)
+type eventSuscriber func(Event)
 
-func (l EventSuscriber) toSuscriber() Subscriber {
+func (l eventSuscriber) toSuscriber() Subscriber {
 	return func(d Data) { l(d.(Event)) }
 }
 
-func (s *EventStream) Listen(ss EventSuscriber) (stop *Completer) {
+func (s *eventStream) Listen(ss eventSuscriber) (stop *Completer) {
 	return s.Stream.Listen(ss.toSuscriber())
 }
 
-type EventFilter func(Event) bool
+type eventFilter func(Event) bool
 
-func (f EventFilter) toFilter() Filter {
+func (f eventFilter) toFilter() Filter {
 	return func(d Data) bool { return f(d.(Event)) }
 }
 
-func (s *EventStream) Where(f EventFilter) *EventStream {
-	return &EventStream{s.Stream.Where(f.toFilter())}
+func (s *eventStream) Where(f eventFilter) *eventStream {
+	return &eventStream{s.Stream.Where(f.toFilter())}
 }
 
-func (s *EventStream) WhereNot(f EventFilter) *EventStream {
-	return &EventStream{s.Stream.WhereNot(f.toFilter())}
+func (s *eventStream) WhereNot(f eventFilter) *eventStream {
+	return &eventStream{s.Stream.WhereNot(f.toFilter())}
 }
 
-func (s *EventStream) First() *EventFuture {
-	return &EventFuture{s.Stream.First()}
+func (s *eventStream) First() *eventFuture {
+	return &eventFuture{s.Stream.First()}
 }
 
-func (s *EventStream) FirstWhere(f EventFilter) *EventFuture {
-	return &EventFuture{s.Stream.FirstWhere(f.toFilter())}
+func (s *eventStream) FirstWhere(f eventFilter) *eventFuture {
+	return &eventFuture{s.Stream.FirstWhere(f.toFilter())}
 }
 
-func (s *EventStream) FirstWhereNot(f EventFilter) *EventFuture {
-	return &EventFuture{s.Stream.FirstWhereNot(f.toFilter())}
+func (s *eventStream) FirstWhereNot(f eventFilter) *eventFuture {
+	return &eventFuture{s.Stream.FirstWhereNot(f.toFilter())}
 }
 
-func (s *EventStream) AsChan() (c chan Event, stop *Completer) {
+func (s *eventStream) AsChan() (c chan Event, stop *Completer) {
 	c = make(chan Event)
 	stop = s.Listen(pipeToEventChan(c))
 	stop.Future().Then(closeEventChan(c))
 	return
 }
 
-func pipeToEventChan(c chan Event) EventSuscriber {
+func pipeToEventChan(c chan Event) eventSuscriber {
 	return func(d Event) {
 		c <- d
 	}

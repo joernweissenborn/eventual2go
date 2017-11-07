@@ -13,7 +13,7 @@ type ShutdownEvent struct{}
 // Reactor is thread-safe event handler.
 type Reactor struct {
 	*sync.Mutex
-	evtIn             *EventStreamController
+	evtIn             *eventStreamController
 	shutdownCompleter *Completer
 	eventRegister     map[interface{}]Subscriber
 }
@@ -23,7 +23,7 @@ func NewReactor() (r *Reactor) {
 
 	r = &Reactor{
 		Mutex:         new(sync.Mutex),
-		evtIn:         NewEventStreamController(),
+		evtIn:         newEventStreamController(),
 		eventRegister: map[interface{}]Subscriber{},
 	}
 	r.shutdownCompleter = r.evtIn.Stream().Listen(r.react)

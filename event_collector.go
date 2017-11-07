@@ -1,33 +1,33 @@
 package eventual2go
 
 // EventCollector is a collector specific for `Event`.
-type EventCollector struct {
+type eventCollector struct {
 	*Collector
 }
 
-func NewEventCollector() (c *EventCollector) {
-	c = &EventCollector{
+func newEventCollector() (c *eventCollector) {
+	c = &eventCollector{
 		Collector: NewCollector(),
 	}
 	return
 }
 
-func (c *EventCollector) Add(e Event) {
+func (c *eventCollector) Add(e Event) {
 	c.Collector.Add(e)
 }
 
-func (c *EventCollector) AddFuture(f *EventFuture) {
+func (c *eventCollector) AddFuture(f *eventFuture) {
 	c.Collector.AddFuture(f.Future)
 }
 
-func (c *EventCollector) AddStream(s *EventStream) {
+func (c *eventCollector) AddStream(s *eventStream) {
 	c.Collector.AddStream(s.Stream)
 }
 
-func (c *EventCollector) Get() Event {
+func (c *eventCollector) Get() Event {
 	return c.Collector.Get().(Event)
 }
 
-func (c *EventCollector) Preview() Event {
+func (c *eventCollector) Preview() Event {
 	return c.Collector.Preview().(Event)
 }
