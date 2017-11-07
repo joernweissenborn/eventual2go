@@ -35,9 +35,10 @@ func (r *Reactor) OnShutdown(s Subscriber) {
 	r.React(ShutdownEvent{}, s)
 }
 
-// Shutdown shuts down the reactor, cancelling all go routines and stream subscriptions. Fullfills the `Shutdowner` interface.
+// Shutdown shuts down the reactor, cancelling all go routines and stream subscriptions. The error is to fullfill the `Shutdowner` interface and will always be nil.
 func (r *Reactor) Shutdown(d Data) (err error){
 	r.Fire(ShutdownEvent{}, d)
+	return nil
 }
 
 // ShutdownFuture returns a future which gets completed after the reactor shut down.
