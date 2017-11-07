@@ -103,7 +103,7 @@ func (f *Future) WaitUntilComplete() {
 	<-f.AsChan()
 }
 
-// WaitUntilCompleteTimeout blocks until the future is complete or the timeout is reached.
+// WaitUntilTimeout blocks until the future is complete or the timeout is reached.
 func (f *Future) WaitUntilTimeout(timeout time.Duration) (complete bool) {
 	if !f.Completed() {
 		select {

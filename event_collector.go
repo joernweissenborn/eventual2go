@@ -1,5 +1,6 @@
 package eventual2go
 
+// EventCollector is a collector specific for `Event`.
 type EventCollector struct {
 	*Collector
 }

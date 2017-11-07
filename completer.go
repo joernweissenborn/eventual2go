@@ -49,6 +49,7 @@ func (c *Completer) CompleteError(err error) {
 	c.f.completeError(err)
 }
 
+// CompleteOnFuture completes the completer with the result or the error of a `Future`.
 func (c *Completer) CompleteOnFuture(f *Future) {
 	f.Then(completeFuture(c))
 	f.Err(completeFutureError(c))

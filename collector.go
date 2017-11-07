@@ -1,5 +1,6 @@
 package eventual2go
 
+// Collector is a data sink. Use it to collect events for later retrieval. All events are stored in historical order.
 type Collector struct {
 	r      *Reactor
 	pile   []Data
@@ -8,13 +9,12 @@ type Collector struct {
 
 type addEvent struct{}
 
+// NewCollector creates a new Collector.
 func NewCollector() (c *Collector) {
-
 	c = &Collector{
 		r:      NewReactor(),
 		remove: NewCompleter(),
 	}
-
 	c.r.React(addEvent{}, c.collect)
 	return
 }
@@ -23,27 +23,33 @@ func (c *Collector) collect(d Data) {
 	c.pile = append(c.pile, d)
 }
 
-func (c *Collector) Remove() {
+// Stop stops the collection on events.
+func (c *Collector) Stop() {
 	c.r.Shutdown(nil)
 	c.remove.Complete(nil)
 }
 
-func (c *Collector) Removed() *Future {
+// Stopped returns a future which completes when the reactor collected all events before the call to `Stop`.
+func (c *Collector) Stopped() *Future {
 	return c.remove.Future()
 }
 
+// Add adds data to the collector.
 func (c *Collector) Add(d Data) {
 	c.r.Fire(addEvent{}, d)
 }
 
+// AddStream collects all events on `Stream`
 func (c *Collector) AddStream(s *Stream) {
 	s.Listen(c.Add).CompleteOnFuture(c.remove.Future())
 }
 
+// AddObservable collects all changes off an `Observable`
 func (c *Collector) AddObservable(o *Observable) {
 	o.OnChange(c.Add)
 }
 
+// AddFuture collects the result of a `Future`
 func (c *Collector) AddFuture(f *Future) {
 	f.Then(c.collectFuture)
 }
@@ -53,6 +59,7 @@ func (c *Collector) collectFuture(d Data) Data {
 	return nil
 }
 
+// AddFutureError collects the error of a `Future`
 func (c *Collector) AddFutureError(f *Future) {
 	f.Err(c.collectFutureErr)
 }
@@ -62,6 +69,7 @@ func (c *Collector) collectFutureErr(e error) (Data, error) {
 	return nil, nil
 }
 
+// Get retrieves the oldes data from the collecter and deletes it from it.
 func (c *Collector) Get() (d Data) {
 	c.r.Lock()
 	defer c.r.Unlock()
@@ -72,6 +80,7 @@ func (c *Collector) Get() (d Data) {
 	return
 }
 
+// Preview retrieves the oldes data from the collecter without deleting it from it.
 func (c *Collector) Preview() (d Data) {
 	c.r.Lock()
 	defer c.r.Unlock()
@@ -81,6 +90,7 @@ func (c *Collector) Preview() (d Data) {
 	return
 }
 
+// Empty returns true if at least one data element is stored in the collector.
 func (c *Collector) Empty() (e bool) {
 	c.r.Lock()
 	defer c.r.Unlock()
@@ -88,6 +98,7 @@ func (c *Collector) Empty() (e bool) {
 	return
 }
 
+// Size returns the number of events stored in the collector.
 func (c *Collector) Size() (n int) {
 	c.r.Lock()
 	defer c.r.Unlock()

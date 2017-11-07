@@ -2,10 +2,12 @@ package eventual2go
 
 import "sync"
 
+// Shutdowner represents the eventual2go shutdown interface.
 type Shutdowner interface {
 	Shutdown(d Data) error
 }
 
+// Shutdown is a register for `Shutdowner` and is used to orchestrate a concurrent shutdown.
 type Shutdown struct {
 	m      *sync.Mutex
 	errors []error
@@ -13,6 +15,7 @@ type Shutdown struct {
 	wg     *sync.WaitGroup
 }
 
+// NewShutdown creats a new `Shutdown`.
 func NewShutdown() (sd *Shutdown) {
 	sd = &Shutdown{
 		m:      &sync.Mutex{},
@@ -23,11 +26,13 @@ func NewShutdown() (sd *Shutdown) {
 	return
 }
 
+// Register registers a `Shutdowner`.
 func (sd *Shutdown) Register(s Shutdowner) {
 	sd.initSd.Future().Then(sd.doShutdown(s))
 	sd.wg.Add(1)
 }
 
+// Do intiatates the shutdown by concurrently calling the shutdown method on all registered `Shutdowner`. Blocks until all shutdowns have finished.
 func (sd *Shutdown) Do(d Data) (errs []error) {
 	sd.initSd.Complete(d)
 	sd.wg.Wait()
