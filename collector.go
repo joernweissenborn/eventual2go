@@ -87,3 +87,10 @@ func (c *Collector) Empty() (e bool) {
 	e = len(c.pile) == 0
 	return
 }
+
+func (c *Collector) Size() (n int) {
+	c.r.Lock()
+	defer c.r.Unlock()
+	n = len(c.pile)
+	return
+}
