@@ -35,8 +35,8 @@ func (r *Reactor) OnShutdown(s Subscriber) {
 	r.React(ShutdownEvent{}, s)
 }
 
-// Shutdown shuts down the reactor, cancelling all go routines and stream subscriptions.
-func (r *Reactor) Shutdown(d Data) {
+// Shutdown shuts down the reactor, cancelling all go routines and stream subscriptions. Fullfills the `Shutdowner` interface.
+func (r *Reactor) Shutdown(d Data) (err error){
 	r.Fire(ShutdownEvent{}, d)
 }
 
