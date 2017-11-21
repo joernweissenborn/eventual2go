@@ -1,5 +1,8 @@
 package eventual2go
 
+// A CompletionFunc is the argument for Completer.OnChange.
+type CompletionFunc func() (Data, error)
+
 // A CompletionHandler gets invoked when a Future is completed. Returned value gets propagated when chaining futures.
 type CompletionHandler func(Data) Data
 
