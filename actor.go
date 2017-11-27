@@ -81,8 +81,9 @@ func messageHandler(a Actor, msg *StreamController, finalErr *Completer) Subscri
 			if finalErr.Completed() {
 				return
 			}
-			a.(LoopActor).Loop()
-			msg.Add(loop{})
+			if a.(LoopActor).Loop() {
+				msg.Add(loop{})
+			}
 		case shutdown:
 			var err error
 			if s, ok := a.(ShutdownActor); ok {
