@@ -54,7 +54,6 @@ type LoopActor interface {
 	Loop() (cont bool)
 }
 
-
 // SpawnActor creates an actor and returns a message stream to it.
 func SpawnActor(a Actor) (messages ActorMessageStream, err error) {
 
@@ -79,6 +78,9 @@ func messageHandler(a Actor, msg *StreamController, finalErr *Completer) Subscri
 		case message:
 			a.OnMessage(d.(message).data)
 		case loop:
+			if finalErr.Completed() {
+				return
+			}
 			a.(LoopActor).Loop()
 			msg.Add(loop{})
 		case shutdown:
