@@ -34,6 +34,19 @@ func (c *Completer) Complete(d Data) {
 	c.f.complete(d)
 }
 
+// CompleteOn invokes a CompletionFunc in a go-routine and either completes with the resut or the error if it is not nil. Don't invoke this function more then once to avoid multiple complition panics.
+func (c *Completer) CompleteOn(f CompletionFunc) {
+	handler := func(f CompletionFunc) {
+		d, err := f()
+		if err == nil {
+			c.Complete(d)
+		} else {
+			c.CompleteError(err)
+		}
+	}
+	go handler(f)
+}
+
 // Future returns the associated Future.
 func (c *Completer) Future() (f *Future) {
 	return c.f
