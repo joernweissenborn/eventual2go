@@ -120,6 +120,11 @@ func (f *Future) Result() Data {
 	return f.result
 }
 
+// ErrResult returns the resulting error of the future, nil if called before completion or after non-error completion.
+func (f *Future) ErrResult() error {
+	return f.err
+}
+
 // Err registers an error handler. If the future is already completed with an error, the handler gets executed
 // immediately.
 // Returns a future that either gets completed with result of the handler or error completed with the error from handler,
