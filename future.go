@@ -10,7 +10,7 @@ import (
 // be registered for both events and get invoked after completion..
 type Future struct {
 	m         *sync.RWMutex
-	fcs       []futurecompleter
+	fcs       map[*futurecompleter]interface{}
 	fces      []futurecompletererror
 	completed bool
 	result    Data
@@ -21,7 +21,7 @@ type Future struct {
 func newFuture() (F *Future) {
 	F = &Future{
 		m:         new(sync.RWMutex),
-		fcs:       []futurecompleter{},
+		fcs:       map[*futurecompleter]interface{}{},
 		fces:      []futurecompletererror{},
 		completed: false,
 	}
@@ -37,7 +37,7 @@ func (f *Future) complete(d Data) {
 		panic(fmt.Sprint("Completed complete future with", d))
 	}
 	f.result = d
-	for _, fc := range f.fcs {
+	for fc := range f.fcs {
 		go executeHandler(fc, d)
 	}
 	f.completed = true
@@ -65,7 +65,7 @@ func (f *Future) completeError(err error) {
 	f.completed = true
 }
 
-func executeHandler(fc futurecompleter, d Data) {
+func executeHandler(fc *futurecompleter, d Data) {
 	fc.f.complete(fc.cf(d))
 }
 
@@ -83,16 +83,32 @@ func deliverErr(fce futurecompletererror, e error) {
 // Then registers a completion handler. If the future is already complete, the handler gets executed immediately.
 // Returns a future that gets completed with result of the handler.
 func (f *Future) Then(ch CompletionHandler) (nf *Future) {
+	nf, _ = f.then(ch)
+	return
+}
 
+// Then registers a completion handler. If the future is already complete, the handler gets executed immediately.
+// Returns a future that gets completed with result of the handler.
+func (f *Future) ThenWithCancel(ch CompletionHandler) (nf *Future, cancel func()) {
+	nf, cancel = f.then(ch)
+	return
+}
+
+func (f *Future) then(ch CompletionHandler) (nf *Future, cancel func()) {
 	nf = newFuture()
-	fc := futurecompleter{ch, nf}
+	fc := &futurecompleter{ch, nf}
+	cancel = func(fcp *futurecompleter) func() {
+		return func() {
+			delete(f.fcs, fcp)
+		}
+	}(fc)
 	f.m.Lock()
 	if f.completed && f.err == nil {
 		f.m.Unlock()
 		executeHandler(fc, f.result)
 		return
 	} else if !f.completed {
-		f.fcs = append(f.fcs, fc)
+		f.fcs[fc] = nil
 	}
 	f.m.Unlock()
 	return
