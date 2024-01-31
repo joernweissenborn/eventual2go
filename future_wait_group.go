@@ -15,18 +15,16 @@ func (fwg *FutureWaitGroup) Wait() {
 	fwg.wg.Wait()
 }
 
-func (fwg *FutureWaitGroup) Add(f *Future) {
+func (fwg *FutureWaitGroup) Add(f *Future[Data]) {
 	fwg.wg.Add(1)
 	f.Then(fwg.onComplete)
 	f.Err(fwg.onErrComplete)
 }
 
-func (fwg *FutureWaitGroup) onComplete(Data) Data {
+func (fwg *FutureWaitGroup) onComplete(Data) {
 	fwg.wg.Done()
-	return nil
 }
 
-func (fwg *FutureWaitGroup) onErrComplete(error) (Data, error) {
+func (fwg *FutureWaitGroup) onErrComplete(error) {
 	fwg.wg.Done()
-	return nil, nil
 }

@@ -13,9 +13,9 @@ type ShutdownEvent struct{}
 // Reactor is thread-safe event handler.
 type Reactor struct {
 	*sync.Mutex
-	evtIn             *eventStreamController
-	shutdownCompleter *Completer
-	eventRegister     map[interface{}]Subscriber
+	evtIn             *StreamController[Event]
+	shutdownCompleter *Completer[Data]
+	eventRegister     map[interface{}]Subscriber[Data]
 }
 
 // NewReactor creates a new Reactor.
@@ -23,15 +23,15 @@ func NewReactor() (r *Reactor) {
 
 	r = &Reactor{
 		Mutex:         new(sync.Mutex),
-		evtIn:         newEventStreamController(),
-		eventRegister: map[interface{}]Subscriber{},
+		evtIn:         NewStreamController[Event](),
+		eventRegister: map[interface{}]Subscriber[Data]{},
 	}
 	r.shutdownCompleter = r.evtIn.Stream().Listen(r.react)
 	return
 }
 
 // OnShutdown registers a custom handler for the shutdown event.
-func (r *Reactor) OnShutdown(s Subscriber) {
+func (r *Reactor) OnShutdown(s Subscriber[Data]) {
 	r.React(ShutdownEvent{}, s)
 }
 
@@ -42,7 +42,7 @@ func (r *Reactor) Shutdown(d Data) (err error){
 }
 
 // ShutdownFuture returns a future which gets completed after the reactor shut down.
-func (r *Reactor) ShutdownFuture() *Future {
+func (r *Reactor) ShutdownFuture() *Future[Data] {
 	return r.shutdownCompleter.Future()
 }
 
@@ -86,7 +86,7 @@ func (r *Reactor) fireEvery(classifier interface{}, data Data, d time.Duration) 
 }
 
 // React registers a Subscriber as handler for a given event classier. Previously registered handlers for for the given classifier will be overwritten!
-func (r *Reactor) React(classifier interface{}, handler Subscriber) {
+func (r *Reactor) React(classifier interface{}, handler Subscriber[Data]) {
 	r.Lock()
 	defer r.Unlock()
 	r.eventRegister[classifier] = handler
@@ -104,46 +104,44 @@ func (r *Reactor) react(evt Event) {
 }
 
 // AddStream subscribes to a Stream, firing an event with the given classifier for every new element in the stream.
-func (r *Reactor) AddStream(classifier interface{}, s *Stream) {
+func (r *Reactor) AddStream(classifier interface{}, s *Stream[Data]) {
 	s.Listen(r.createEventFromStream(classifier)).CompleteOnFuture(r.shutdownCompleter.Future())
 }
 
-func (r *Reactor) createEventFromStream(classifier interface{}) Subscriber {
+func (r *Reactor) createEventFromStream(classifier interface{}) Subscriber[Data] {
 	return func(d Data) {
 		r.evtIn.Add(Event{classifier, d})
 	}
 }
 
 // AddFuture creates an event with given classifier, which will be fired when the given future completes. The event will not be triggered on error comletion.
-func (r *Reactor) AddFuture(classifier interface{}, f *Future) {
+func (r *Reactor) AddFuture(classifier interface{}, f *Future[Data]) {
 	f.Then(r.createEventFromFuture(classifier))
 }
 
-func (r *Reactor) createEventFromFuture(classifier interface{}) CompletionHandler {
-	return func(d Data) Data {
+func (r *Reactor) createEventFromFuture(classifier interface{}) CompletionHandler[Data] {
+	return func(d Data) {
 		r.Fire(classifier, d)
-		return nil
 	}
 }
 
 //AddFutureError acts the same as AddFuture, but registers a handler for the future error.
-func (r *Reactor) AddFutureError(classifier interface{}, f *Future) {
+func (r *Reactor) AddFutureError(classifier interface{}, f *Future[Data]) {
 	f.Err(r.createEventFromFutureError(classifier))
 }
 
 func (r *Reactor) createEventFromFutureError(classifier interface{}) ErrorHandler {
-	return func(e error) (Data, error) {
+	return func(e error)  {
 		r.Fire(classifier, e)
-		return nil, nil
 	}
 }
 
 //AddObservable fires an event with the given classifier whenever the observable is changed.
-func (r *Reactor) AddObservable(classifier interface{}, o *Observable) {
+func (r *Reactor) AddObservable(classifier interface{}, o *Observable[Data]) {
 	o.OnChange(r.createEventFromObservable(classifier))
 }
 
-func (r *Reactor) createEventFromObservable(classifier interface{}) Subscriber {
+func (r *Reactor) createEventFromObservable(classifier interface{}) Subscriber[Data] {
 	return func(d Data) {
 		r.Fire(classifier, d)
 	}

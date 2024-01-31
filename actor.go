@@ -9,13 +9,13 @@ type shutdown message
 
 //ActorMessageStream is used to send messages to an actor.
 type ActorMessageStream struct {
-	streamController *StreamController
-	finalErr         *Future
+	streamController *StreamController[Data]
+	finalErr         *Future[error]
 }
 
-func newActorMessageStream(finalErr *Future) (ams ActorMessageStream) {
+func newActorMessageStream(finalErr *Future[error]) (ams ActorMessageStream) {
 	ams = ActorMessageStream{
-		streamController: NewStreamController(),
+		streamController: NewStreamController[Data](),
 		finalErr:         finalErr,
 	}
 	return
@@ -61,7 +61,7 @@ func SpawnActor(a Actor) (messages ActorMessageStream, err error) {
 		return
 	}
 
-	finalErr := NewCompleter()
+	finalErr := NewCompleter[error]()
 	messages = newActorMessageStream(finalErr.Future())
 	messages.streamController.Stream().Listen(messageHandler(a, messages.streamController, finalErr))
 
@@ -72,7 +72,7 @@ func SpawnActor(a Actor) (messages ActorMessageStream, err error) {
 	return
 }
 
-func messageHandler(a Actor, msg *StreamController, finalErr *Completer) Subscriber {
+func messageHandler(a Actor, msg *StreamController[Data], finalErr *Completer[error]) Subscriber[Data] {
 	return func(d Data) {
 		switch d.(type) {
 		case message:

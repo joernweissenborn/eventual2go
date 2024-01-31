@@ -1,6 +1,6 @@
 package eventual2go
 
-type streamEvent struct {
-	data Data
-	next *Future
+type streamEvent [T any] struct {
+	data T
+	next *Future[*streamEvent[T]]
 }

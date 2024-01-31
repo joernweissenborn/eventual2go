@@ -10,19 +10,19 @@ var ErrTimeout = errors.New("Timeout")
 
 // Completer is thread-safe struct that can be completed with arbitrary data or failed with an error. Handler functions can
 // be registered for both events and get invoked after completion..
-type Completer struct {
-	f *Future
+type Completer[T any] struct {
+	f *Future[T]
 }
 
 // NewCompleter creates a new Completer.
-func NewCompleter() (c *Completer) {
-	c = &Completer{newFuture()}
+func NewCompleter[T any]() (c *Completer[T]) {
+	c = &Completer[T]{newFuture[T]()}
 	return
 }
 
 // NewTimeoutCompleter creates a new Completer, which error completes after the specified duration, if Completer hasnt been completed otherwise.
-func NewTimeoutCompleter(d time.Duration) (c *Completer) {
-	c = &Completer{newFuture()}
+func NewTimeoutCompleter[T any](d time.Duration) (c *Completer[T]) {
+	c = &Completer[T]{newFuture[T]()}
 
 	go timeout(c, d)
 
@@ -30,13 +30,13 @@ func NewTimeoutCompleter(d time.Duration) (c *Completer) {
 }
 
 // Complete completes the Completer with the given data and triggers all registered completion handlers. Panics if the Completer is already complete.
-func (c *Completer) Complete(d Data) {
+func (c *Completer[T]) Complete(d T) {
 	c.f.complete(d)
 }
 
 // CompleteOn invokes a CompletionFunc in a go-routine and either completes with the resut or the error if it is not nil. Don't invoke this function more then once to avoid multiple complition panics.
-func (c *Completer) CompleteOn(f CompletionFunc) {
-	handler := func(f CompletionFunc) {
+func (c *Completer[T]) CompleteOn(f CompletionFunc[T]) {
+	handler := func(f CompletionFunc[T]) {
 		d, err := f()
 		if err == nil {
 			c.Complete(d)
@@ -48,41 +48,39 @@ func (c *Completer) CompleteOn(f CompletionFunc) {
 }
 
 // Future returns the associated Future.
-func (c *Completer) Future() (f *Future) {
+func (c *Completer[T]) Future() (f *Future[T]) {
 	return c.f
 }
 
 // Completed returns the completion state.
-func (c *Completer) Completed() bool {
+func (c *Completer[T]) Completed() bool {
 	return c.f.Completed()
 }
 
 // CompleteError completes the Completer with the given error and triggers all registered error handlers. Panics if the Completer is already complete.
-func (c *Completer) CompleteError(err error) {
+func (c *Completer[T]) CompleteError(err error) {
 	c.f.completeError(err)
 }
 
 // CompleteOnFuture completes the completer with the result or the error of a `Future`.
-func (c *Completer) CompleteOnFuture(f *Future) {
+func (c *Completer[T]) CompleteOnFuture(f *Future[T]) {
 	f.Then(completeFuture(c))
 	f.Err(completeFutureError(c))
 }
 
-func completeFuture(c *Completer) CompletionHandler {
-	return func(d Data) Data {
+func completeFuture[T any](c *Completer[T]) CompletionHandler[T] {
+	return func(d T) {
 		c.Complete(d)
-		return nil
 	}
 }
 
-func completeFutureError(c *Completer) ErrorHandler {
-	return func(err error) (Data, error) {
+func completeFutureError[T any](c *Completer[T]) ErrorHandler {
+	return func(err error)  {
 		c.CompleteError(err)
-		return nil, nil
 	}
 }
 
-func timeout(c *Completer, d time.Duration) {
+func timeout[T any](c *Completer[T], d time.Duration) {
 	time.Sleep(d)
 	if !c.Completed() {
 		c.CompleteError(ErrTimeout)

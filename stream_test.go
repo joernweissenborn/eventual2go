@@ -7,7 +7,7 @@ import (
 )
 
 func TestStreamBasics(t *testing.T) {
-	sc := NewStreamController()
+	sc := NewStreamController[string]()
 	c, _ := sc.Stream().AsChan()
 	sc.Add("test")
 
@@ -15,16 +15,16 @@ func TestStreamBasics(t *testing.T) {
 	case <-time.After(1 * time.Millisecond):
 		t.Fatal("no response")
 	case data := <-c:
-		if data.(string) != "test" {
+		if data != "test" {
 			t.Error("got wrong data")
 		}
 	}
 }
 
 func TestStreamCancelSub(t *testing.T) {
-	sc := NewStreamController()
+	sc := NewStreamController[int]()
 	a := false
-	stop := sc.Stream().Listen(func(d Data) {
+	stop := sc.Stream().Listen(func(d int) {
 		a = true
 	})
 	stop.Complete(nil)
@@ -35,7 +35,7 @@ func TestStreamCancelSub(t *testing.T) {
 
 	b := false
 	m := &sync.Mutex{} //protect datarace
-	c := sc.Stream().Listen(func(Data) {
+	c := sc.Stream().Listen(func(int) {
 		b = true
 	})
 	c.Complete(0)
@@ -50,7 +50,7 @@ func TestStreamCancelSub(t *testing.T) {
 }
 
 func TestStreamMultiSubscription(t *testing.T) {
-	sc := NewStreamController()
+	sc := NewStreamController[string]()
 	c1, _ := sc.Stream().AsChan()
 	c2, _ := sc.Stream().AsChan()
 	sc.Add("test")
@@ -58,7 +58,7 @@ func TestStreamMultiSubscription(t *testing.T) {
 	case <-time.After(1 * time.Millisecond):
 		t.Fatal("no response")
 	case data := <-c1:
-		if data.(string) != "test" {
+		if data != "test" {
 			t.Error("got wrong data")
 		}
 	}
@@ -66,7 +66,7 @@ func TestStreamMultiSubscription(t *testing.T) {
 	case <-time.After(1 * time.Millisecond):
 		t.Fatal("no response")
 	case data := <-c2:
-		if data.(string) != "test" {
+		if data != "test" {
 			t.Error("got wrong data")
 		}
 	}
@@ -74,7 +74,7 @@ func TestStreamMultiSubscription(t *testing.T) {
 }
 
 func TestStreamFirst(t *testing.T) {
-	sc := NewStreamController()
+	sc := NewStreamController[string]()
 	c := sc.Stream().First().AsChan()
 
 	sc.Add("test")
@@ -82,15 +82,15 @@ func TestStreamFirst(t *testing.T) {
 	case <-time.After(1 * time.Second):
 		t.Error("no response")
 	case data := <-c:
-		if data.(string) != "test" {
+		if data != "test" {
 			t.Error("got wrong data")
 		}
 	}
 }
 
 func TestStreamFilter(t *testing.T) {
-	sc := NewStreamController()
-	c, _ := sc.Stream().Where(func(d Data) bool { return d.(int) != 2 }).AsChan()
+	sc := NewStreamController[int]()
+	c, _ := sc.Stream().Where(func(d int) bool { return d != 2 }).AsChan()
 	sc.Add(1)
 	sc.Add(2)
 	sc.Add(2)
@@ -103,7 +103,7 @@ func TestStreamFilter(t *testing.T) {
 		case <-time.After(1 * time.Millisecond):
 			t.Fatal("no response")
 		case data := <-c:
-			if data.(int) == 2 {
+			if data == 2 {
 				t.Error("got 2")
 			}
 		}
@@ -111,8 +111,8 @@ func TestStreamFilter(t *testing.T) {
 }
 
 func TestStreamSplit(t *testing.T) {
-	sc := NewStreamController()
-	y, n := sc.Stream().Split(func(d Data) bool { return d.(int) != 2 })
+	sc := NewStreamController[int]()
+	y, n := sc.Stream().Split(func(d int) bool { return d != 2 })
 	c1, _ := y.AsChan()
 	c2, _ := n.AsChan()
 	sc.Add(1)
@@ -126,7 +126,7 @@ func TestStreamSplit(t *testing.T) {
 		case <-time.After(1 * time.Millisecond):
 			t.Fatal("no response")
 		case data := <-c1:
-			if data.(int) == 2 {
+			if data == 2 {
 				t.Error("got 2")
 			}
 		}
@@ -136,7 +136,7 @@ func TestStreamSplit(t *testing.T) {
 		case <-time.After(1 * time.Millisecond):
 			t.Fatal("no response")
 		case data := <-c2:
-			if data.(int) != 2 {
+			if data != 2 {
 				t.Error("got 2")
 			}
 		}
@@ -144,14 +144,14 @@ func TestStreamSplit(t *testing.T) {
 }
 
 func TestStreamTransformer(t *testing.T) {
-	sc := NewStreamController()
-	c, _ := sc.Stream().Transform(func(d Data) Data { return d.(int) * 2 }).AsChan()
+	sc := NewStreamController[int]()
+	c, _ := TransformStream(sc.Stream(), func(d int) int { return d * 2 }).AsChan()
 	sc.Add(5)
 	select {
 	case <-time.After(1 * time.Millisecond):
 		t.Fatal("no response")
 	case data := <-c:
-		if data.(int) != 10 {
+		if data != 10 {
 			t.Error("got 5")
 		}
 	}
@@ -159,16 +159,16 @@ func TestStreamTransformer(t *testing.T) {
 
 func TestJoinFuture(t *testing.T) {
 
-	sc := NewStreamController()
+	sc := NewStreamController[string]()
 	c, _ := sc.Stream().AsChan()
-	fc := NewCompleter()
+	fc := NewCompleter[string]()
 	sc.JoinFuture(fc.Future())
 	fc.Complete("test")
 	select {
 	case <-time.After(1 * time.Second):
 		t.Error("no response")
 	case data := <-c:
-		if data.(string) != "test" {
+		if data != "test" {
 			t.Error("got wrong data")
 		}
 	}

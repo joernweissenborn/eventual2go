@@ -48,7 +48,7 @@ func TestCollector(t *testing.T) {
 		t.Error("Collector is not empty after get")
 	}
 
-	f := NewCompleter()
+	f := NewCompleter[Data]()
 	c.AddFuture(f.Future())
 	f.Complete("bla")
 

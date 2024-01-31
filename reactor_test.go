@@ -58,7 +58,7 @@ func TestReactorFuture(t *testing.T) {
 
 	r.React("TestEvent", rt.Handler)
 
-	c := NewCompleter()
+	c := NewCompleter[Data]()
 	f := c.Future()
 	r.AddFuture("TestEvent", f)
 	c.Complete("HALLO")
@@ -76,7 +76,7 @@ func TestReactorFutureError(t *testing.T) {
 
 	r.React("TestEvent", rt.Handler)
 
-	c := NewCompleter()
+	c := NewCompleter[Data]()
 	f := c.Future()
 	r.AddFutureError("TestEvent", f)
 	c.CompleteError(errors.New("HALLO"))
@@ -93,7 +93,7 @@ func TestReactorStream(t *testing.T) {
 	rt := &reactorTester{Mutex: &sync.Mutex{}}
 	r.React("TestEvent", rt.Handler)
 
-	s := NewStreamController()
+	s := NewStreamController[Data]()
 	r.AddStream("TestEvent", s.Stream())
 	s.Add("HALLO")
 	time.Sleep(1 * time.Millisecond)

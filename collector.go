@@ -4,7 +4,7 @@ package eventual2go
 type Collector struct {
 	r      *Reactor
 	pile   []Data
-	remove *Completer
+	remove *Completer[Data]
 }
 
 type addEvent struct{}
@@ -13,7 +13,7 @@ type addEvent struct{}
 func NewCollector() (c *Collector) {
 	c = &Collector{
 		r:      NewReactor(),
-		remove: NewCompleter(),
+		remove: NewCompleter[Data](),
 	}
 	c.r.React(addEvent{}, c.collect)
 	return
@@ -30,7 +30,7 @@ func (c *Collector) Stop() {
 }
 
 // Stopped returns a future which completes when the reactor collected all events before the call to `Stop`.
-func (c *Collector) Stopped() *Future {
+func (c *Collector) Stopped() *Future[Data] {
 	return c.remove.Future()
 }
 
@@ -40,33 +40,31 @@ func (c *Collector) Add(d Data) {
 }
 
 // AddStream collects all events on `Stream`
-func (c *Collector) AddStream(s *Stream) {
+func (c *Collector) AddStream(s *Stream[Data]) {
 	s.Listen(c.Add).CompleteOnFuture(c.remove.Future())
 }
 
 // AddObservable collects all changes off an `Observable`
-func (c *Collector) AddObservable(o *Observable) {
+func (c *Collector) AddObservable(o *Observable[Data]) {
 	o.OnChange(c.Add)
 }
 
 // AddFuture collects the result of a `Future`
-func (c *Collector) AddFuture(f *Future) {
+func (c *Collector) AddFuture(f *Future[Data]) {
 	f.Then(c.collectFuture)
 }
 
-func (c *Collector) collectFuture(d Data) Data {
+func (c *Collector) collectFuture(d Data){
 	c.Add(d)
-	return nil
 }
 
 // AddFutureError collects the error of a `Future`
-func (c *Collector) AddFutureError(f *Future) {
+func (c *Collector) AddFutureError(f *Future[Data]) {
 	f.Err(c.collectFutureErr)
 }
 
-func (c *Collector) collectFutureErr(e error) (Data, error) {
+func (c *Collector) collectFutureErr(e error)  {
 	c.Add(e)
-	return nil, nil
 }
 
 // Get retrieves the oldes data from the collecter and deletes it from it.

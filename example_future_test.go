@@ -12,23 +12,21 @@ import (
 func ExampleFuture() {
 
 	// create the completers, one we will complete with error, the other normaly.
-	completerNor := eventual2go.NewCompleter()
-	completerErr := eventual2go.NewCompleter()
+	completerNor := eventual2go.NewCompleter[string]()
+	completerErr := eventual2go.NewCompleter[string]()
 
 	// set up success handler
-	var onsuccess eventual2go.CompletionHandler = func(d eventual2go.Data) eventual2go.Data {
+	var onsuccess eventual2go.CompletionHandler[string] = func(d string) {
 		fmt.Println("SUCESS:", d)
-		return "Hello Future Chaining"
 	}
 
 	// set up error handler
-	var onerror eventual2go.ErrorHandler = func(e error) (eventual2go.Data, error) {
+	var onerror eventual2go.ErrorHandler = func(e error)  {
 		fmt.Println("ERROR:", e)
-		return nil, nil
 	}
 
 	// our long running async func
-	mylongrunning := func(do_err bool, c *eventual2go.Completer) {
+	mylongrunning := func(do_err bool, c *eventual2go.Completer[string]) {
 		time.Sleep(1 * time.Second)
 
 		if do_err {
@@ -45,7 +43,7 @@ func ExampleFuture() {
 	// register the handlers
 
 	// we chain the succes
-	fNor.Then(onsuccess).Then(onsuccess)
+	fNor.Then(onsuccess)
 	fNor.Err(onerror)
 	fErr.Then(onsuccess)
 	fErr.Err(onerror)

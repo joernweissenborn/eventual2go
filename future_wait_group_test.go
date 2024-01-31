@@ -8,8 +8,8 @@ import (
 )
 
 func TestFutureWaitGroup(t *testing.T) {
-	c1 := eventual2go.NewCompleter()
-	c2 := eventual2go.NewCompleter()
+	c1 := eventual2go.NewCompleter[eventual2go.Data]()
+	c2 := eventual2go.NewCompleter[eventual2go.Data]()
 
 	wg := eventual2go.NewFutureWaitGroup()
 	wg.Add(c1.Future())

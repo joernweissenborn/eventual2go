@@ -6,7 +6,7 @@ import "sync"
 type FutureCache struct {
 	m         sync.Mutex
 	indices   []int
-	futures   []*Future
+	futures   []*Future[Data]
 	nextindex int
 	size      int
 }
@@ -19,7 +19,7 @@ func NewCache(size int) (fc *FutureCache) {
 	for i := range fc.indices {
 		fc.indices[i] = -1
 	}
-	fc.futures = make([]*Future, size)
+	fc.futures = make([]*Future[Data], size)
 	return
 }
 
@@ -35,7 +35,7 @@ func (fc *FutureCache) Cached(index int) (is bool) {
 }
 
 // Get retrives the future with a given index.
-func (fc *FutureCache) Get(index int) (f *Future) {
+func (fc *FutureCache) Get(index int) (f *Future[Data]) {
 	for i, ind := range fc.indices {
 		if index == ind {
 			f = fc.futures[i]
@@ -53,7 +53,7 @@ func (fc *FutureCache) incIndex() {
 }
 
 // Cache stores a future with given index.
-func (fc *FutureCache) Cache(Index int, f *Future) {
+func (fc *FutureCache) Cache(Index int, f *Future[Data]) {
 	fc.indices[fc.nextindex] = Index
 	fc.futures[fc.nextindex] = f
 	fc.incIndex()

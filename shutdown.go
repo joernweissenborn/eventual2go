@@ -11,7 +11,7 @@ type Shutdowner interface {
 type Shutdown struct {
 	m      *sync.Mutex
 	errors []error
-	initSd *Completer
+	initSd *Completer[Data]
 	wg     *sync.WaitGroup
 }
 
@@ -20,7 +20,7 @@ func NewShutdown() (sd *Shutdown) {
 	sd = &Shutdown{
 		m:      &sync.Mutex{},
 		errors: []error{},
-		initSd: NewCompleter(),
+		initSd: NewCompleter[Data](),
 		wg:     &sync.WaitGroup{},
 	}
 	return
@@ -40,14 +40,13 @@ func (sd *Shutdown) Do(d Data) (errs []error) {
 	return
 }
 
-func (sd *Shutdown) doShutdown(s Shutdowner) CompletionHandler {
-	return func(d Data) Data {
+func (sd *Shutdown) doShutdown(s Shutdowner) CompletionHandler[Data] {
+	return func(d Data)  {
 		if err := s.Shutdown(d); err != nil {
 			sd.m.Lock()
 			sd.errors = append(sd.errors, err)
 			sd.m.Unlock()
 		}
 		sd.wg.Done()
-		return nil
 	}
 }
