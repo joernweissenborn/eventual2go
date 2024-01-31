@@ -7,7 +7,7 @@ import (
 
 func TestCollector(t *testing.T) {
 
-	c := NewCollector()
+	c := NewCollector[Data]()
 
 	if !c.Empty() {
 		t.Error("Collector is not empty after init")

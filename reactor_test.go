@@ -1,14 +1,13 @@
 package eventual2go
 
 import (
-	"errors"
 	"sync"
 	"testing"
 	"time"
 )
 
 func TestReactorBasic(t *testing.T) {
-	r := NewReactor()
+	r := NewReactor[Data]()
 	rt := &reactorTester{Mutex: &sync.Mutex{}}
 	r.React("TestEvent", rt.Handler)
 
@@ -28,7 +27,7 @@ func TestReactorBasic(t *testing.T) {
 }
 
 func TestReactorMultipleEvents(t *testing.T) {
-	r := NewReactor()
+	r := NewReactor[Data]()
 	rt1 := &reactorTester{Mutex: &sync.Mutex{}}
 	rt2 := &reactorTester{Mutex: &sync.Mutex{}}
 	r.React("TestEvent1", rt1.Handler)
@@ -53,7 +52,7 @@ func TestReactorMultipleEvents(t *testing.T) {
 }
 
 func TestReactorFuture(t *testing.T) {
-	r := NewReactor()
+	r := NewReactor[Data]()
 	rt := &reactorTester{Mutex: &sync.Mutex{}}
 
 	r.React("TestEvent", rt.Handler)
@@ -70,26 +69,8 @@ func TestReactorFuture(t *testing.T) {
 		t.Error("Wrong Data")
 	}
 }
-func TestReactorFutureError(t *testing.T) {
-	r := NewReactor()
-	rt := &reactorTester{Mutex: &sync.Mutex{}}
-
-	r.React("TestEvent", rt.Handler)
-
-	c := NewCompleter[Data]()
-	f := c.Future()
-	r.AddFutureError("TestEvent", f)
-	c.CompleteError(errors.New("HALLO"))
-	time.Sleep(1 * time.Millisecond)
-	if !rt.hasFired() {
-		t.Fatal("Event didnt fire")
-	}
-	if rt.data.(error).Error() != "HALLO" {
-		t.Error("Wrong Data")
-	}
-}
 func TestReactorStream(t *testing.T) {
-	r := NewReactor()
+	r := NewReactor[Data]()
 	rt := &reactorTester{Mutex: &sync.Mutex{}}
 	r.React("TestEvent", rt.Handler)
 
