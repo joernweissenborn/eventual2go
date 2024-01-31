@@ -10,7 +10,6 @@ Features:
 * Streams
 * Futures
 * Reactor
-* code generation for typed events
 
 ## Installation
 
